@@ -708,4 +708,31 @@ func (s *Server) handleSeed(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// handleListCustomers: daftar customer + ringkasan order & total belanja (admin).
+func (s *Server) handleListCustomers(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.pool.Query(r.Context(), `
+		SELECT c.id, c.name, c.phone, c.created_at,
+		       (SELECT COUNT(*) FROM orders o WHERE o.customer_phone=c.phone) AS total_orders,
+		       (SELECT COALESCE(SUM(o.total),0) FROM orders o WHERE o.customer_phone=c.phone AND o.status IN ('completed','handed_over')) AS total_spent
+		FROM customers c ORDER BY c.id DESC LIMIT 300`)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	defer rows.Close()
+	var out []map[string]any
+	for rows.Next() {
+		var id int64
+		var name, phone string
+		var created time.Time
+		var orders, spent int
+		if err := rows.Scan(&id, &name, &phone, &created, &orders, &spent); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+		out = append(out, map[string]any{"id": id, "name": name, "phone": phone, "created_at": created, "orders": orders, "spent": spent})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
 var _ = pgx.ErrNoRows

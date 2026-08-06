@@ -23,28 +23,32 @@ type Server struct {
 	notify  *service.Notifier
 	seed    *service.Seeder
 	storage *service.Storage
+	customers *service.Customers
 	uploads http.Handler
 }
 
 func NewServer(pool *pgxpool.Pool, cfg config.Config) *Server {
 	notify := service.NewNotifier(pool, cfg.N8NWebhookURL)
 	payments := service.NewPayments(pool, cfg.PaymentProvider, cfg.SumoAPIURL, cfg.SumoAPIKey)
+	auth := service.NewAuth(pool, cfg.JWTSecret)
+	customers := service.NewCustomers(pool, auth, notify)
 	storage, err := service.NewStorage(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3Bucket, cfg.S3PublicURL, cfg.S3Secure)
 	if err != nil {
 		log.Printf("storage S3: %v", err)
 	}
 	return &Server{
-		pool:    pool,
-		cfg:     cfg,
-		auth:    service.NewAuth(pool, cfg.JWTSecret),
-		stock:   service.NewStock(pool),
-		orders:  service.NewOrders(pool, notify, payments),
-		pay:     payments,
-		aff:     service.NewAffiliate(cfg.AffiliateCode),
-		notify:  notify,
-		seed:    service.NewSeeder(pool),
-		storage: storage,
-		uploads: http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))),
+		pool:      pool,
+		cfg:       cfg,
+		auth:      auth,
+		stock:     service.NewStock(pool),
+		orders:    service.NewOrders(pool, notify, payments),
+		pay:       payments,
+		aff:       service.NewAffiliate(cfg.AffiliateCode),
+		notify:    notify,
+		seed:      service.NewSeeder(pool),
+		storage:   storage,
+		customers: customers,
+		uploads:   http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))),
 	}
 }
 
@@ -73,6 +77,9 @@ func (s *Server) Handler() http.Handler {
 
 	// ---- public ----
 	mux.HandleFunc("POST /api/v1/auth/login", s.handleLogin)
+	mux.HandleFunc("POST /api/v1/auth/customer/otp", s.handleCustomerOTPRequest)
+	mux.HandleFunc("POST /api/v1/auth/customer/otp/verify", s.handleCustomerOTPVerify)
+	mux.HandleFunc("GET /api/v1/customer/orders", s.requireAuth(s.handleCustomerOrders, "customer"))
 	mux.HandleFunc("GET /api/v1/store/events", s.handleStoreEvents)
 	mux.HandleFunc("GET /api/v1/store/products", s.handleStoreProducts)
 	mux.HandleFunc("GET /api/v1/store/products/{id}", s.handleStoreProductDetail)
@@ -102,6 +109,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/admin/orders", s.requireAuth(s.handleListOrders, "admin"))
 	mux.HandleFunc("GET /api/v1/admin/orders/{id}", s.requireAuth(s.handleGetOrder, "admin"))
 	mux.HandleFunc("GET /api/v1/admin/stock", s.requireAuth(s.handleStockList, "admin"))
+	mux.HandleFunc("GET /api/v1/admin/customers", s.requireAuth(s.handleListCustomers, "admin"))
 	mux.HandleFunc("POST /api/v1/admin/seed", s.requireAuth(s.handleSeed, "admin"))
 
 	// ---- POS + fulfillment (semua staf) ----

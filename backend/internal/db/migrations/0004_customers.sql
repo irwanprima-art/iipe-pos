@@ -1,0 +1,17 @@
+-- Customer (login WA/OTP) + kode OTP
+CREATE TABLE IF NOT EXISTS customers (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  phone TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS otp_codes (
+  id BIGSERIAL PRIMARY KEY,
+  phone TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_otp_phone ON otp_codes(phone);

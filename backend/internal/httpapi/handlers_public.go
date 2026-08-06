@@ -216,21 +216,94 @@ func (s *Server) eventProduct(ctx context.Context, eventID, productID int64) (do
 
 func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		EventID       int64               `json:"event_id"`
-		Items         []service.CartItem  `json:"items"`
-		CustomerName  string              `json:"customer_name"`
-		CustomerPhone string              `json:"customer_phone"`
+		EventID       int64              `json:"event_id"`
+		Items         []service.CartItem `json:"items"`
+		CustomerName  string             `json:"customer_name"`
+		CustomerPhone string             `json:"customer_phone"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
 		return
 	}
+	if body.CustomerName == "" {
+		writeErr(w, 400, "nama wajib diisi")
+		return
+	}
+	if !service.ValidPhone(body.CustomerPhone) {
+		writeErr(w, 400, "nomor WhatsApp tidak valid")
+		return
+	}
+	body.CustomerPhone = service.NormalizePhone(body.CustomerPhone)
+
 	order, err := s.orders.Checkout(r.Context(), body.EventID, body.Items, body.CustomerName, body.CustomerPhone)
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, order)
+	// auto-login customer (identitas via nomor WA)
+	customerToken := ""
+	if _, err := s.customers.FindOrCreate(r.Context(), body.CustomerName, body.CustomerPhone); err == nil {
+		customerToken, _ = s.auth.IssueCustomer(body.CustomerName, body.CustomerPhone)
+	}
+	b, _ := json.Marshal(order)
+	var m map[string]any
+	_ = json.Unmarshal(b, &m)
+	m["customer_token"] = customerToken
+	writeJSON(w, http.StatusOK, m)
+}
+
+// handleCustomerOTPRequest mengirim kode OTP ke nomor WA (untuk login ulang customer).
+func (s *Server) handleCustomerOTPRequest(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Phone string `json:"phone"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeErr(w, 400, "bad request")
+		return
+	}
+	code, err := s.customers.RequestOTP(r.Context(), body.Phone)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	resp := map[string]any{"ok": true}
+	if code != "" {
+		resp["dev_otp"] = code // hanya muncul bila kanal WA belum dikonfigurasi
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// handleCustomerOTPVerify memvalidasi OTP dan mengembalikan token customer.
+func (s *Server) handleCustomerOTPVerify(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Phone string `json:"phone"`
+		OTP   string `json:"otp"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeErr(w, 400, "bad request")
+		return
+	}
+	token, name, err := s.customers.VerifyOTP(r.Context(), body.Phone, body.OTP)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"token": token, "name": name, "phone": service.NormalizePhone(body.Phone)})
+}
+
+// handleCustomerOrders: daftar order milik customer yang login (role=customer).
+func (s *Server) handleCustomerOrders(w http.ResponseWriter, r *http.Request) {
+	claims := claimsFrom(r)
+	if claims == nil || claims.Phone == "" {
+		writeErr(w, 401, "harus login sebagai customer")
+		return
+	}
+	orders, err := s.orders.ListByPhone(r.Context(), claims.Phone)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, orders)
 }
 
 func (s *Server) handleOrderStatus(w http.ResponseWriter, r *http.Request) {

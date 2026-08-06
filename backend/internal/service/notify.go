@@ -52,3 +52,21 @@ func (n *Notifier) OrderReady(ctx context.Context, orderID int64, phone, name, e
 		`INSERT INTO notification_logs (order_id, channel, status, payload) VALUES ($1,'whatsapp',$2,$3)`,
 		orderID, status, pb)
 }
+
+// HasChannel true bila kanal WhatsApp (n8n) dikonfigurasi.
+func (n *Notifier) HasChannel() bool { return n.url != "" }
+
+// SendWhatsApp mengirim pesan WA via n8n (best-effort, async).
+func (n *Notifier) SendWhatsApp(phone, message string) {
+	if n.url == "" {
+		return
+	}
+	payload := map[string]any{"event": "whatsapp", "phone": phone, "message": message}
+	body, _ := json.Marshal(payload)
+	go func() {
+		resp, err := n.httpC.Post(n.url, "application/json", bytes.NewReader(body))
+		if err == nil {
+			resp.Body.Close()
+		}
+	}()
+}

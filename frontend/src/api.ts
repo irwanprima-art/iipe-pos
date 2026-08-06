@@ -37,9 +37,9 @@ export function currentUser(): { name: string; role: string } | null {
 export function setUser(u: { name: string; role: string }) { localStorage.setItem('iipe_user', JSON.stringify(u)) }
 
 // ---------- http ----------
-async function request<T>(method: string, path: string, body?: any): Promise<T> {
+async function request<T>(method: string, path: string, body: any, getTok: () => string): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const t = token()
+  const t = getTok()
   if (t) headers['Authorization'] = 'Bearer ' + t
   const res = await fetch(base + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined })
   const data = await res.json().catch(() => ({}))
@@ -48,10 +48,32 @@ async function request<T>(method: string, path: string, body?: any): Promise<T> 
 }
 
 export const api = {
-  get: <T>(p: string) => request<T>('GET', p),
-  post: <T>(p: string, b?: any) => request<T>('POST', p, b),
-  patch: <T>(p: string, b?: any) => request<T>('PATCH', p, b),
+  get: <T>(p: string) => request<T>('GET', p, undefined, token),
+  post: <T>(p: string, b?: any) => request<T>('POST', p, b, token),
+  patch: <T>(p: string, b?: any) => request<T>('PATCH', p, b, token),
 }
+
+// API memakai token customer (untuk "Pesanan Saya")
+export const apiCust = {
+  get: <T>(p: string) => request<T>('GET', p, undefined, customerToken),
+}
+
+// ---- customer auth (login via WA + OTP) ----
+export function customerToken() { return localStorage.getItem('iipe_customer_token') || '' }
+export function setCustomerToken(t: string) { localStorage.setItem('iipe_customer_token', t) }
+export function clearCustomerToken() { localStorage.removeItem('iipe_customer_token') }
+
+export function normalizePhone(raw: string) {
+  let s = (raw || '').replace(/\D/g, '')
+  if (s.startsWith('0')) s = '62' + s.slice(1)
+  return s
+}
+export function isValidWaPhone(raw: string) {
+  const n = normalizePhone(raw)
+  return n.length >= 10 && n.length <= 15
+}
+
+export interface Customer { id: number; name: string; phone: string; orders: number; spent: number; created_at: string }
 
 // ---------- helpers ----------
 export function fmtRp(n: number) {

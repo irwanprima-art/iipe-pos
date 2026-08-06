@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Card, Form, Input, Button, Space, Typography, message, Descriptions, Divider, Alert } from 'antd'
 import { QRCodeSVG } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
-import { loadCart, clearCart, fmtRp, api, Order } from '../api'
+import { loadCart, clearCart, fmtRp, api, Order, setCustomerToken, isValidWaPhone } from '../api'
 
 export default function CheckoutPage() {
   const nav = useNavigate()
@@ -18,10 +18,11 @@ export default function CheckoutPage() {
     setLoading(true)
     try {
       const items = cart.lines.map((l) => ({ product_id: l.product_id, qty: l.qty, item_type: l.item_type }))
-      const o = await api.post<Order>('/checkout', {
+      const o = await api.post<Order & { customer_token?: string }>('/checkout', {
         event_id: cart.event_id, items,
         customer_name: v.name, customer_phone: v.phone,
       })
+      if (o.customer_token) setCustomerToken(o.customer_token)
       setOrder(o)
       clearCart()
     } catch (e: any) {
@@ -40,7 +41,9 @@ export default function CheckoutPage() {
           <Form.Item name="name" label="Nama Lengkap" rules={[{ required: true, message: 'Nama wajib diisi' }]}>
             <Input placeholder="Nama sesuai KTP" />
           </Form.Item>
-          <Form.Item name="phone" label="Nomor WhatsApp (untuk notifikasi)" rules={[{ required: true, message: 'Nomor WA wajib diisi' }]}>
+          <Form.Item name="phone" label="Nomor WhatsApp (untuk notifikasi & login)" rules={[{ required: true, message: 'Nomor WA wajib diisi' }, {
+            validator: (_, val) => (!val || isValidWaPhone(val) ? Promise.resolve() : Promise.reject(new Error('Nomor WhatsApp tidak valid (08xx / 62xx, 10-15 digit)'))),
+          }]}>
             <Input placeholder="08xxxxxxxxxx" />
           </Form.Item>
           <Button type="primary" htmlType="submit" loading={loading} block>Bayar dengan QRIS</Button>

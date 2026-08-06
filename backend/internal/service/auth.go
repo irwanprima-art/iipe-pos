@@ -25,6 +25,7 @@ type Claims struct {
 	UserID int64  `json:"uid"`
 	Name   string `json:"name"`
 	Role   string `json:"role"`
+	Phone  string `json:"phone"`
 	jwt.RegisteredClaims
 }
 
@@ -49,6 +50,21 @@ func (a *Auth) Login(ctx context.Context, email, password string) (string, domai
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	ts, err := token.SignedString(a.secret)
 	return ts, u, err
+}
+
+// IssueCustomer menerbitkan token untuk customer (identitas via nomor WA).
+func (a *Auth) IssueCustomer(name, phone string) (string, error) {
+	claims := Claims{
+		Name:  name,
+		Role:  "customer",
+		Phone: phone,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(a.secret)
 }
 
 func (a *Auth) Parse(tokenStr string) (*Claims, error) {

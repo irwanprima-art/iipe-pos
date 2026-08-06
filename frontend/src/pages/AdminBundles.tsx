@@ -44,8 +44,12 @@ export default function AdminBundles() {
           { title: 'Nama', dataIndex: 'name' },
           { title: 'Barcode', dataIndex: 'barcode_pcs' },
           {
-            title: 'Komponen', render: (_: any, p: Product) => (
-              <Space wrap>{p.components?.map((c) => <Tag key={c.product_id}>{c.name} ×{c.qty}</Tag>)}</Space>
+            title: 'Komponen (SKU × qty)', render: (_: any, p: Product) => (
+              <Space direction="vertical" size={2}>
+                {p.components?.map((c) => (
+                  <Tag key={c.product_id} style={{ textAlign: 'left' }}>{c.sku} — {c.name} ×{c.qty}</Tag>
+                ))}
+              </Space>
             ),
           },
         ]}

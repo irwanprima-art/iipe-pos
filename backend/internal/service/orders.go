@@ -584,6 +584,25 @@ func (o *Orders) List(ctx context.Context, status string, eventID int64) ([]doma
 	return out, rows.Err()
 }
 
+// ListByPhone mengembalikan order milik customer (berdasarkan nomor WA).
+func (o *Orders) ListByPhone(ctx context.Context, phone string) ([]domain.Order, error) {
+	rows, err := o.pool.Query(ctx, `SELECT id FROM orders WHERE customer_phone=$1 ORDER BY id DESC LIMIT 50`, phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.Order
+	for rows.Next() {
+		var id int64
+		rows.Scan(&id)
+		ord, err := o.Get(ctx, id)
+		if err == nil {
+			out = append(out, ord)
+		}
+	}
+	return out, rows.Err()
+}
+
 func (o *Orders) loadOrder(ctx context.Context, where string, args ...any) (domain.Order, error) {
 	var ord domain.Order
 	var eventName string

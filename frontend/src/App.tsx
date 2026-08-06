@@ -1,9 +1,10 @@
 import { type ReactNode } from 'react'
 import { Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Layout, Menu, Space, Button, Tag } from 'antd'
-import { currentUser, clearToken, token } from './api'
+import { currentUser, clearToken, token, customerToken, clearCustomerToken } from './api'
 import StoreHome from './pages/StoreHome'
 import ProductDetail from './pages/ProductDetail'
+import MyOrders from './pages/MyOrders'
 import CartPage from './pages/CartPage'
 import CheckoutPage from './pages/CheckoutPage'
 import OrderStatusPage from './pages/OrderStatusPage'
@@ -15,6 +16,7 @@ import AdminEvents from './pages/AdminEvents'
 import AdminOrders from './pages/AdminOrders'
 import AdminStock from './pages/AdminStock'
 import AdminShopee from './pages/AdminShopee'
+import AdminCustomers from './pages/AdminCustomers'
 import PosPage from './pages/PosPage'
 import FulfillPage from './pages/FulfillPage'
 
@@ -24,6 +26,7 @@ function TopBar() {
   const nav = useNavigate()
   const user = currentUser()
   const loggedIn = !!token()
+  const hasCustomer = !!customerToken()
   return (
     <Header style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#001529' }}>
       <Link to="/" style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>IIPE Bazaar</Link>
@@ -36,8 +39,16 @@ function TopBar() {
             <Tag color="blue">{user?.name} ({user?.role})</Tag>
             <Button size="small" onClick={() => { clearToken(); nav('/') }}>Logout</Button>
           </>
+        ) : hasCustomer ? (
+          <>
+            <Button type="text" style={{ color: '#fff' }} onClick={() => nav('/my-orders')}>Pesanan Saya</Button>
+            <Button size="small" onClick={() => { clearCustomerToken(); nav('/') }}>Logout</Button>
+          </>
         ) : (
-          <Button type="link" style={{ color: '#fff', padding: 0 }} onClick={() => nav('/admin/login')}>Login</Button>
+          <>
+            <Button type="link" style={{ color: '#fff' }} onClick={() => nav('/my-orders')}>Pesanan Saya</Button>
+            <Button type="link" style={{ color: '#fff', padding: 0 }} onClick={() => nav('/admin/login')}>Login</Button>
+          </>
         )}
       </Space>
     </Header>
@@ -62,6 +73,7 @@ function AdminLayout() {
     { key: '/admin/orders', label: <Link to="/admin/orders">Order</Link> },
     { key: '/admin/stock', label: <Link to="/admin/stock">Stok</Link> },
     { key: '/admin/shopee', label: <Link to="/admin/shopee">Shopee Link</Link> },
+    { key: '/admin/customers', label: <Link to="/admin/customers">Customer</Link> },
   ]
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -81,6 +93,7 @@ function AdminLayout() {
           <Route path="/orders" element={<AdminOrders />} />
           <Route path="/stock" element={<AdminStock />} />
           <Route path="/shopee" element={<AdminShopee />} />
+          <Route path="/customers" element={<AdminCustomers />} />
         </Routes>
       </Content>
     </Layout>
@@ -95,6 +108,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<StoreHome />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/my-orders" element={<MyOrders />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/status/:token" element={<OrderStatusPage />} />
