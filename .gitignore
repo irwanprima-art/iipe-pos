@@ -1,0 +1,24 @@
+# ===== Dependencies & build =====
+node_modules/
+dist/
+backend/server
+backend/server.exe
+
+# ===== Environment / RAHASIA (jangan pernah di-commit) =====
+.env
+.env.*
+!.env.example
+
+# ===== Uploads lokal (gambar saat dev) =====
+uploads/*
+!uploads/.gitkeep
+
+# ===== Logs & temp =====
+*.log
+*.tmp
+npm-debug.log*
+
+# ===== OS / editor =====
+.DS_Store
+Thumbs.db
+.vscode/
