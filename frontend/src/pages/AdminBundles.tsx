@@ -74,13 +74,13 @@ export default function AdminBundles() {
                       <Form.Item {...rest} name={[name, 'product_id']} rules={[{ required: true, message: 'Pilih produk' }]}>
                         <Select style={{ width: 360 }} showSearch optionFilterProp="label" placeholder="Pilih produk komponen" options={productOpts} />
                       </Form.Item>
-                      <Form.Item {...rest} name={[name, 'qty']} initialValue={1}>
-                        <Input type="number" style={{ width: 70 }} min={1} addonBefore="x" />
+                      <Form.Item {...rest} name={[name, 'qty']} rules={[{ required: true, message: 'Qty wajib diisi' }]}>
+                        <Input type="number" style={{ width: 70 }} min={1} defaultValue={1} addonBefore="x" />
                       </Form.Item>
                       <MinusCircleOutlined onClick={() => remove(name)} />
                     </Space>
                   ))}
-                  <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>Tambah komponen</Button>
+                  <Button type="dashed" onClick={() => add({ qty: 1 })} icon={<PlusOutlined />}>Tambah komponen</Button>
                 </>
               )}
             </Form.List>

@@ -106,7 +106,7 @@ func (s *Server) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 	var id int64
 	err := s.pool.QueryRow(r.Context(), `
 		INSERT INTO products (sku, name, category, description, barcode_pcs, barcode_carton, qty_per_carton, marketplace_link, images)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+		VALUES ($1,$2,$3,$4,NULLIF($5,''),NULLIF($6,''),$7,$8,$9) RETURNING id`,
 		body.SKU, body.Name, body.Category, body.Description, body.BarcodePCS, body.BarcodeCarton,
 		body.QtyPerCarton, body.MarketplaceLink, body.Images).Scan(&id)
 	if err != nil {
@@ -151,10 +151,10 @@ func (s *Server) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET description=$1 WHERE id=$2`, *body.Description, id)
 	}
 	if body.BarcodePCS != nil {
-		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET barcode_pcs=$1 WHERE id=$2`, *body.BarcodePCS, id)
+		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET barcode_pcs=NULLIF($1,'') WHERE id=$2`, *body.BarcodePCS, id)
 	}
 	if body.BarcodeCarton != nil {
-		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET barcode_carton=$1 WHERE id=$2`, *body.BarcodeCarton, id)
+		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET barcode_carton=NULLIF($1,'') WHERE id=$2`, *body.BarcodeCarton, id)
 	}
 	if body.QtyPerCarton != nil {
 		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET qty_per_carton=$1 WHERE id=$2`, *body.QtyPerCarton, id)
@@ -402,7 +402,7 @@ func (s *Server) handleCreateBundle(w http.ResponseWriter, r *http.Request) {
 	var id int64
 	if err := tx.QueryRow(r.Context(), `
 		INSERT INTO products (sku, name, category, barcode_pcs, is_bundle, images)
-		VALUES ($1,$2,$3,$4,true,$5) RETURNING id`,
+		VALUES ($1,$2,$3,NULLIF($4,''),true,$5) RETURNING id`,
 		body.SKU, body.Name, body.Category, body.BarcodePCS, body.Images).Scan(&id); err != nil {
 		writeErr(w, 400, err.Error())
 		return
