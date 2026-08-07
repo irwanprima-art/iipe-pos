@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -14,6 +15,7 @@ type Config struct {
 	MidtransKey   string
 	MockPayments  bool
 	UploadDir     string
+	AppBaseURL    string // URL publik aplikasi, untuk redirect payment (mis. https://bazzar.souluze.com)
 	S3Endpoint    string
 	S3Bucket      string
 	S3AccessKey   string
@@ -38,6 +40,7 @@ func Load() Config {
 		MidtransKey:   os.Getenv("MIDTRANS_SERVER_KEY"),
 		MockPayments:  getenv("MOCK_PAYMENTS", "true") == "true",
 		UploadDir:     getenv("UPLOAD_DIR", "/uploads"),
+		AppBaseURL:    strings.TrimSuffix(getenv("APP_BASE_URL", ""), "/"),
 		S3Endpoint:    os.Getenv("S3_ENDPOINT"),
 		S3Bucket:      os.Getenv("S3_BUCKET"),
 		S3AccessKey:   os.Getenv("S3_ACCESS_KEY"),

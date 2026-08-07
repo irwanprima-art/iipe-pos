@@ -48,14 +48,14 @@ func availabilityTx(ctx context.Context, tx pgx.Tx, eventID, productID int64) (i
 	return avail, err
 }
 
-func insertMovement(ctx context.Context, tx pgx.Tx, eventID, productID, qty int64, typ, refType string, refID int64, reason string) error {
-	_, err := tx.Exec(ctx, `INSERT INTO stock_movements (event_id, product_id, type, qty, ref_type, ref_id, reason) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-		eventID, productID, typ, qty, refType, refID, reason)
+func insertMovement(ctx context.Context, tx pgx.Tx, eventID, productID, qty int64, typ, refType string, refID int64, reason, actor string) error {
+	_, err := tx.Exec(ctx, `INSERT INTO stock_movements (event_id, product_id, type, qty, ref_type, ref_id, reason, actor) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+		eventID, productID, typ, qty, refType, refID, reason, actor)
 	return err
 }
 
 // Reserve mereservasi stok. Error jika available tidak cukup.
-func (s *Stock) Reserve(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason string) error {
+func (s *Stock) Reserve(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason, actor string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -68,14 +68,14 @@ func (s *Stock) Reserve(ctx context.Context, eventID, productID, qty int64, refT
 	if int64(avail) < qty {
 		return fmt.Errorf("stok tidak cukup: butuh %d, tersedia %d", qty, avail)
 	}
-	if err := insertMovement(ctx, tx, eventID, productID, qty, "RESERVE", refType, refID, reason); err != nil {
+	if err := insertMovement(ctx, tx, eventID, productID, qty, "RESERVE", refType, refID, reason, actor); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
 }
 
 // Unreserve melepas reservasi (batal sebelum di-pick).
-func (s *Stock) Unreserve(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason string) error {
+func (s *Stock) Unreserve(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason, actor string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -88,14 +88,14 @@ func (s *Stock) Unreserve(ctx context.Context, eventID, productID, qty int64, re
 	if int64(reserved) < qty {
 		return fmt.Errorf("reservasi tidak cukup: butuh %d, ada %d", qty, reserved)
 	}
-	if err := insertMovement(ctx, tx, eventID, productID, qty, "UNRESERVE", refType, refID, reason); err != nil {
+	if err := insertMovement(ctx, tx, eventID, productID, qty, "UNRESERVE", refType, refID, reason, actor); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
 }
 
 // Pick memindahkan stok dari reserved ke sold (picked).
-func (s *Stock) Pick(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason string) error {
+func (s *Stock) Pick(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason, actor string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -108,27 +108,27 @@ func (s *Stock) Pick(ctx context.Context, eventID, productID, qty int64, refType
 	if int64(reserved) < qty {
 		return fmt.Errorf("reservasi tidak cukup untuk dipick: butuh %d, ada %d", qty, reserved)
 	}
-	if err := insertMovement(ctx, tx, eventID, productID, qty, "PICK", refType, refID, reason); err != nil {
+	if err := insertMovement(ctx, tx, eventID, productID, qty, "PICK", refType, refID, reason, actor); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
 }
 
 // Return mengembalikan stok yang sudah dipick ke available.
-func (s *Stock) Return(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason string) error {
+func (s *Stock) Return(ctx context.Context, eventID, productID, qty int64, refType string, refID int64, reason, actor string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if err := insertMovement(ctx, tx, eventID, productID, qty, "RETURN", refType, refID, reason); err != nil {
+	if err := insertMovement(ctx, tx, eventID, productID, qty, "RETURN", refType, refID, reason, actor); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
 }
 
 // Adjust mengubah stock_total dengan pencatatan AUDIT (alasan wajib).
-func (s *Stock) Adjust(ctx context.Context, eventID, productID, newTotal int64, reason string) error {
+func (s *Stock) Adjust(ctx context.Context, eventID, productID, newTotal int64, reason, actor string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -141,14 +141,14 @@ func (s *Stock) Adjust(ctx context.Context, eventID, productID, newTotal int64, 
 	if _, err := tx.Exec(ctx, `UPDATE event_products SET stock_total=$1 WHERE event_id=$2 AND product_id=$3`, newTotal, eventID, productID); err != nil {
 		return err
 	}
-	if err := insertMovement(ctx, tx, eventID, productID, newTotal-oldTotal, "ADJUST", "", 0, reason); err != nil {
+	if err := insertMovement(ctx, tx, eventID, productID, newTotal-oldTotal, "ADJUST", "", 0, reason, actor); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
 }
 
 // Inbound menambah stok fisik (terima barang masuk) dengan pencatatan ledger.
-func (s *Stock) Inbound(ctx context.Context, eventID, productID, qty int64, reason string) error {
+func (s *Stock) Inbound(ctx context.Context, eventID, productID, qty int64, reason, actor string) error {
 	if qty <= 0 {
 		return fmt.Errorf("qty harus lebih dari 0")
 	}
@@ -163,7 +163,7 @@ func (s *Stock) Inbound(ctx context.Context, eventID, productID, qty int64, reas
 	if _, err := tx.Exec(ctx, `UPDATE event_products SET stock_total = stock_total + $1 WHERE event_id=$2 AND product_id=$3`, qty, eventID, productID); err != nil {
 		return err
 	}
-	if err := insertMovement(ctx, tx, eventID, productID, qty, "IN", "", 0, reason); err != nil {
+	if err := insertMovement(ctx, tx, eventID, productID, qty, "IN", "", 0, reason, actor); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

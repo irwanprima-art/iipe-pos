@@ -16,8 +16,8 @@ import (
 )
 
 type CartItem struct {
-	ProductID int64 `json:"product_id"`
-	Qty       int   `json:"qty"`
+	ProductID int64  `json:"product_id"`
+	Qty       int    `json:"qty"`
 	ItemType  string `json:"item_type"` // product | bundle
 }
 
@@ -112,7 +112,7 @@ func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, 
 				if avail < need {
 					return domain.Order{}, fmt.Errorf("stok komponen %s tidak cukup", sku)
 				}
-				if err := insertMovement(ctx, tx, eventID, c.id, int64(need), "RESERVE", "order", 0, "checkout bundle"); err != nil {
+				if err := insertMovement(ctx, tx, eventID, c.id, int64(need), "RESERVE", "order", 0, "checkout bundle", name); err != nil {
 					return domain.Order{}, err
 				}
 				itemRows = append(itemRows, domain.OrderItem{ItemType: "component", ProductID: c.id, SKU: sku, Name: pname, Qty: need, Price: 0, State: "allocated"})
@@ -125,7 +125,7 @@ func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, 
 			if avail < it.Qty {
 				return domain.Order{}, fmt.Errorf("stok %s tidak cukup (sisa %d)", sku, avail)
 			}
-			if err := insertMovement(ctx, tx, eventID, it.ProductID, int64(it.Qty), "RESERVE", "order", 0, "checkout"); err != nil {
+			if err := insertMovement(ctx, tx, eventID, it.ProductID, int64(it.Qty), "RESERVE", "order", 0, "checkout", name); err != nil {
 				return domain.Order{}, err
 			}
 			itemRows = append(itemRows, domain.OrderItem{ItemType: "product", ProductID: it.ProductID, SKU: sku, Name: pname, Qty: it.Qty, Price: price, State: "allocated"})
@@ -188,7 +188,7 @@ func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, 
 }
 
 // PosCheckout membuat order POS yang langsung selesai (handed over) dengan stock PICK langsung.
-func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, items []CartItem) (domain.Order, error) {
+func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, items []CartItem, actor string) (domain.Order, error) {
 	if len(items) == 0 {
 		return domain.Order{}, errors.New("keranjang kosong")
 	}
@@ -244,10 +244,10 @@ func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, 
 				if avail < need {
 					return domain.Order{}, fmt.Errorf("stok komponen %s tidak cukup", sku)
 				}
-				if err := insertMovement(ctx, tx, eventID, c.id, int64(need), "RESERVE", "order", 0, "pos"); err != nil {
+				if err := insertMovement(ctx, tx, eventID, c.id, int64(need), "RESERVE", "order", 0, "pos", actor); err != nil {
 					return domain.Order{}, err
 				}
-				if err := insertMovement(ctx, tx, eventID, c.id, int64(need), "PICK", "order", 0, "pos"); err != nil {
+				if err := insertMovement(ctx, tx, eventID, c.id, int64(need), "PICK", "order", 0, "pos", actor); err != nil {
 					return domain.Order{}, err
 				}
 				itemRows = append(itemRows, domain.OrderItem{ItemType: "component", ProductID: c.id, SKU: sku, Name: pname, Qty: need, Price: 0, State: "picked"})
@@ -260,10 +260,10 @@ func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, 
 			if avail < it.Qty {
 				return domain.Order{}, fmt.Errorf("stok %s tidak cukup (sisa %d)", sku, avail)
 			}
-			if err := insertMovement(ctx, tx, eventID, it.ProductID, int64(it.Qty), "RESERVE", "order", 0, "pos"); err != nil {
+			if err := insertMovement(ctx, tx, eventID, it.ProductID, int64(it.Qty), "RESERVE", "order", 0, "pos", actor); err != nil {
 				return domain.Order{}, err
 			}
-			if err := insertMovement(ctx, tx, eventID, it.ProductID, int64(it.Qty), "PICK", "order", 0, "pos"); err != nil {
+			if err := insertMovement(ctx, tx, eventID, it.ProductID, int64(it.Qty), "PICK", "order", 0, "pos", actor); err != nil {
 				return domain.Order{}, err
 			}
 			itemRows = append(itemRows, domain.OrderItem{ItemType: "product", ProductID: it.ProductID, SKU: sku, Name: pname, Qty: it.Qty, Price: price, State: "picked"})
@@ -356,7 +356,7 @@ func (o *Orders) PickAll(ctx context.Context, orderID int64, actor string) error
 			continue
 		}
 		if l.state == "allocated" {
-			if err := insertMovement(ctx, tx, eventID, l.pid, l.qty, "PICK", "order", orderID, "pick"); err != nil {
+			if err := insertMovement(ctx, tx, eventID, l.pid, l.qty, "PICK", "order", orderID, "pick", actor); err != nil {
 				return err
 			}
 		}
@@ -507,11 +507,11 @@ func (o *Orders) Cancel(ctx context.Context, orderID int64, actor, reason string
 			continue
 		}
 		if l.state == "allocated" {
-			if err := insertMovement(ctx, tx, eventID, l.pid, l.qty, "UNRESERVE", "order", orderID, reason); err != nil {
+			if err := insertMovement(ctx, tx, eventID, l.pid, l.qty, "UNRESERVE", "order", orderID, reason, actor); err != nil {
 				return err
 			}
 		} else if l.state == "picked" || l.state == "packed" {
-			if err := insertMovement(ctx, tx, eventID, l.pid, l.qty, "RETURN", "order", orderID, reason); err != nil {
+			if err := insertMovement(ctx, tx, eventID, l.pid, l.qty, "RETURN", "order", orderID, reason, actor); err != nil {
 				return err
 			}
 		}

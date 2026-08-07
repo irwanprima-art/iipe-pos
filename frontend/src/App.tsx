@@ -8,6 +8,7 @@ import MyOrders from './pages/MyOrders'
 import CartPage from './pages/CartPage'
 import CheckoutPage from './pages/CheckoutPage'
 import OrderStatusPage from './pages/OrderStatusPage'
+import PaymentResultPage from './pages/PaymentResultPage'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminProducts from './pages/AdminProducts'
@@ -112,6 +113,7 @@ export default function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/status/:token" element={<OrderStatusPage />} />
+          <Route path="/payment/result" element={<PaymentResultPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/*" element={<AdminLayout />} />
           <Route path="/pos" element={<StaffGuard><PosPage /></StaffGuard>} />

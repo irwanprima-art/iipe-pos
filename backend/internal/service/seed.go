@@ -86,7 +86,7 @@ func (s *Seeder) Seed(ctx context.Context) error {
 			return err
 		}
 		if !hasIn {
-			if _, err := s.pool.Exec(ctx, `INSERT INTO stock_movements (event_id, product_id, type, qty, reason) VALUES ($1,$2,'IN',$3,'seed')`, eventID, pid, p.stock); err != nil {
+			if _, err := s.pool.Exec(ctx, `INSERT INTO stock_movements (event_id, product_id, type, qty, reason, actor) VALUES ($1,$2,'IN',$3,'seed','seed')`, eventID, pid, p.stock); err != nil {
 				return err
 			}
 		}

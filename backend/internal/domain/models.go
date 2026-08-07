@@ -67,7 +67,9 @@ type StockMovement struct {
 	Qty       int       `json:"qty"`
 	RefType   string    `json:"ref_type"`
 	RefID     int64     `json:"ref_id"`
+	RefNo     string    `json:"ref_no"` // nomor order bila ref_type='order'
 	Reason    string    `json:"reason"`
+	Actor     string    `json:"actor"` // siapa yang melakukan (admin/operator/customer)
 	CreatedAt time.Time `json:"created_at"`
 }
 

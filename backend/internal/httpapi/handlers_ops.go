@@ -42,16 +42,16 @@ func (s *Server) handlePosProducts(w http.ResponseWriter, r *http.Request) {
 }
 
 type eventProductLite struct {
-	ProductID    int64    `json:"product_id"`
-	SKU          string   `json:"sku"`
-	Name         string   `json:"name"`
-	BarcodePCS   string   `json:"barcode_pcs"`
-	BarcodeCarton string  `json:"barcode_carton"`
-	QtyPerCarton int      `json:"qty_per_carton"`
-	IsBundle     bool     `json:"is_bundle"`
-	Price        int      `json:"price"`
-	Available    int      `json:"available"`
-	Images       []string `json:"images"`
+	ProductID     int64    `json:"product_id"`
+	SKU           string   `json:"sku"`
+	Name          string   `json:"name"`
+	BarcodePCS    string   `json:"barcode_pcs"`
+	BarcodeCarton string   `json:"barcode_carton"`
+	QtyPerCarton  int      `json:"qty_per_carton"`
+	IsBundle      bool     `json:"is_bundle"`
+	Price         int      `json:"price"`
+	Available     int      `json:"available"`
+	Images        []string `json:"images"`
 }
 
 func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +68,7 @@ func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "metode pembayaran harus qris atau edc (cashless)")
 		return
 	}
-	order, err := s.orders.PosCheckout(r.Context(), body.EventID, body.Method, body.Items)
+	order, err := s.orders.PosCheckout(r.Context(), body.EventID, body.Method, body.Items, actorName(r))
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return

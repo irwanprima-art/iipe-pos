@@ -583,7 +583,7 @@ func (s *Server) handleAddEventProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !hasIn && body.StockTotal > 0 {
-		if _, err := tx.Exec(r.Context(), `INSERT INTO stock_movements (event_id, product_id, type, qty, reason) VALUES ($1,$2,'IN',$3,'admin')`, eventID, body.ProductID, body.StockTotal); err != nil {
+		if _, err := tx.Exec(r.Context(), `INSERT INTO stock_movements (event_id, product_id, type, qty, reason, actor) VALUES ($1,$2,'IN',$3,'admin',$4)`, eventID, body.ProductID, body.StockTotal, actorName(r)); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}
@@ -623,7 +623,7 @@ func (s *Server) handleAdjustStock(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "alasan wajib diisi")
 		return
 	}
-	if err := s.stock.Adjust(r.Context(), eventID, pid, body.StockTotal, body.Reason); err != nil {
+	if err := s.stock.Adjust(r.Context(), eventID, pid, body.StockTotal, body.Reason, actorName(r)); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
@@ -716,7 +716,7 @@ func (s *Server) handleStockInbound(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "alasan wajib diisi")
 		return
 	}
-	if err := s.stock.Inbound(r.Context(), eventID, pid, body.Qty, body.Reason); err != nil {
+	if err := s.stock.Inbound(r.Context(), eventID, pid, body.Qty, body.Reason, actorName(r)); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
@@ -734,10 +734,12 @@ func (s *Server) handleStockMovements(w http.ResponseWriter, r *http.Request) {
 	productID := queryInt(r, "product_id")
 	rows, err := s.pool.Query(r.Context(), `
 		SELECT sm.id, sm.event_id, e.name, sm.product_id, p.sku, p.name, sm.type, sm.qty,
-		       COALESCE(sm.ref_type,''), COALESCE(sm.ref_id,0), COALESCE(sm.reason,''), sm.created_at
+		       COALESCE(sm.ref_type,''), COALESCE(sm.ref_id,0), COALESCE(sm.reason,''), COALESCE(sm.actor,''),
+		       COALESCE(o.order_no,''), sm.created_at
 		FROM stock_movements sm
 		JOIN events e ON e.id = sm.event_id
 		JOIN products p ON p.id = sm.product_id
+		LEFT JOIN orders o ON sm.ref_type='order' AND o.id = sm.ref_id
 		WHERE ($1 = 0 OR sm.event_id = $1) AND ($2 = 0 OR sm.product_id = $2)
 		ORDER BY sm.id DESC
 		LIMIT 500`, eventID, productID)
@@ -749,7 +751,7 @@ func (s *Server) handleStockMovements(w http.ResponseWriter, r *http.Request) {
 	var out []domain.StockMovement
 	for rows.Next() {
 		var m domain.StockMovement
-		if err := rows.Scan(&m.ID, &m.EventID, &m.EventName, &m.ProductID, &m.SKU, &m.Product, &m.Type, &m.Qty, &m.RefType, &m.RefID, &m.Reason, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.EventID, &m.EventName, &m.ProductID, &m.SKU, &m.Product, &m.Type, &m.Qty, &m.RefType, &m.RefID, &m.Reason, &m.Actor, &m.RefNo, &m.CreatedAt); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}

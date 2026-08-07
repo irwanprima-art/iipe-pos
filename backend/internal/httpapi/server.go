@@ -29,7 +29,7 @@ type Server struct {
 
 func NewServer(pool *pgxpool.Pool, cfg config.Config) *Server {
 	notify := service.NewNotifier(pool, cfg.N8NWebhookURL)
-	payments := service.NewPayments(pool, cfg.PaymentProvider, cfg.SumoAPIURL, cfg.SumoAPIKey)
+	payments := service.NewPayments(pool, cfg.PaymentProvider, cfg.SumoAPIURL, cfg.SumoAPIKey, cfg.AppBaseURL)
 	auth := service.NewAuth(pool, cfg.JWTSecret)
 	customers := service.NewCustomers(pool, auth, notify)
 	storage, err := service.NewStorage(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3Bucket, cfg.S3PublicURL, cfg.S3Secure)

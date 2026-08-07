@@ -20,15 +20,17 @@ type Payments struct {
 	provider string // mock | sumopay
 	sumoURL  string
 	sumoKey  string
+	baseURL  string // URL publik aplikasi untuk redirect payment
 	httpC    *http.Client
 }
 
-func NewPayments(pool *pgxpool.Pool, provider, sumoURL, sumoKey string) *Payments {
+func NewPayments(pool *pgxpool.Pool, provider, sumoURL, sumoKey, baseURL string) *Payments {
 	return &Payments{
 		pool:     pool,
 		provider: provider,
 		sumoURL:  strings.TrimSuffix(sumoURL, "/"),
 		sumoKey:  sumoKey,
+		baseURL:  strings.TrimSuffix(baseURL, "/"),
 		httpC:    &http.Client{Timeout: 15 * time.Second},
 	}
 }
@@ -71,12 +73,19 @@ type sumopayCreateResp struct {
 }
 
 func (p *Payments) createSumopay(ctx context.Context, orderID int64, amount int, ref string) (domain.Payment, error) {
+	// Ambil qr_code order sebagai token untuk halaman redirect hasil pembayaran.
+	var qrCode string
+	_ = p.pool.QueryRow(ctx, `SELECT qr_code FROM orders WHERE id=$1`, orderID).Scan(&qrCode)
 	body := map[string]any{
 		"order_id":                 ref,
 		"amount":                   amount,
 		"currency":                 "IDR",
 		"expires_in_hours":         24,
 		"payment_method_type_code": "QRIS",
+	}
+	if p.baseURL != "" {
+		body["success_return_url"] = p.baseURL + "/payment/result?token=" + qrCode + "&result=success"
+		body["cancel_return_url"] = p.baseURL + "/payment/result?token=" + qrCode + "&result=cancelled"
 	}
 	payload, _ := json.Marshal(body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.sumoURL+"/api/v1/payments", bytes.NewReader(payload))
