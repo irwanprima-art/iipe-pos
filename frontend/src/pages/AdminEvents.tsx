@@ -6,6 +6,8 @@ export default function AdminEvents() {
   const [rows, setRows] = useState<Event[]>([])
   const [open, setOpen] = useState(false)
   const [form] = Form.useForm()
+  const [editing, setEditing] = useState<Event | null>(null)
+  const [editForm] = Form.useForm()
   const [productOpts, setProductOpts] = useState<{ value: number; label: string }[]>([])
 
   const [drawerEvent, setDrawerEvent] = useState<Event | null>(null)
@@ -34,6 +36,22 @@ export default function AdminEvents() {
       await api.post('/admin/events', { code: v.code, name: v.name, location: v.location, is_active: true, lat: v.lat, lng: v.lng })
       message.success('Event dibuat')
       setOpen(false)
+      load()
+    } catch (e: any) { message.error(e.message) }
+  }
+
+  function openEdit(ev: Event) {
+    setEditing(ev)
+    editForm.setFieldsValue({ code: ev.code, name: ev.name, location: ev.location, lat: ev.lat, lng: ev.lng })
+  }
+
+  async function updateEvent() {
+    if (!editing) return
+    const v = await editForm.validateFields()
+    try {
+      await api.patch(`/admin/events/${editing.id}`, { name: v.name, location: v.location, lat: v.lat, lng: v.lng })
+      message.success('Event diperbarui')
+      setEditing(null)
       load()
     } catch (e: any) { message.error(e.message) }
   }
@@ -80,6 +98,7 @@ export default function AdminEvents() {
           {
             title: 'Aksi', render: (_: any, ev: Event) => (
               <Space>
+                <Button size="small" onClick={() => openEdit(ev)}>Edit</Button>
                 <Button size="small" type="primary" onClick={() => openDrawer(ev)}>Katalog & Stok</Button>
                 <Button size="small" onClick={() => toggleActive(ev)}>{ev.is_active ? 'Nonaktifkan' : 'Aktifkan'}</Button>
               </Space>
@@ -96,6 +115,18 @@ export default function AdminEvents() {
           <Space wrap>
             <Form.Item name="lat" label="Latitude"><Input type="number" placeholder="mis. -6.200000" /></Form.Item>
             <Form.Item name="lng" label="Longitude"><Input type="number" placeholder="mis. 106.816666" /></Form.Item>
+          </Space>
+        </Form>
+      </Modal>
+
+      <Modal title={`Edit Event — ${editing?.name || ''}`} open={!!editing} onCancel={() => setEditing(null)} onOk={updateEvent}>
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="code" label="Kode"><Input disabled /></Form.Item>
+          <Form.Item name="name" label="Nama" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="location" label="Lokasi"><Input /></Form.Item>
+          <Space wrap>
+            <Form.Item name="lat" label="Latitude"><Input type="number" /></Form.Item>
+            <Form.Item name="lng" label="Longitude"><Input type="number" /></Form.Item>
           </Space>
         </Form>
       </Modal>
