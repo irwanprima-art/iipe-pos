@@ -22,6 +22,8 @@ export default function OrderStatusPage() {
 
   const stepIdx = STEP_ORDER.indexOf(order.status)
   const step = Math.max(0, stepIdx === -1 ? STEP_ORDER.length : stepIdx)
+  // QR pickup hanya ditampilkan setelah pembayaran sukses (bukan saat menunggu bayar / dibatalkan)
+  const showQR = order.status !== 'pending_payment' && order.status !== 'cancelled'
 
   async function simulatePay() {
     setPaying(true)
@@ -81,10 +83,12 @@ export default function OrderStatusPage() {
             {order.pickup_no != null && <Descriptions.Item label="Nomor Ambil">#{String(order.pickup_no).padStart(3, '0')}</Descriptions.Item>}
           </Descriptions>
 
-          <div style={{ textAlign: 'center' }}>
-            <Typography.Paragraph type="secondary">Tunjukkan QR ini ke petugas saat mengambil barang</Typography.Paragraph>
-            <QRCodeSVG value={order.qr_code} size={200} style={{ margin: '0 auto' }} />
-          </div>
+          {showQR && (
+            <div style={{ textAlign: 'center' }}>
+              <Typography.Paragraph type="secondary">Tunjukkan QR ini ke petugas saat mengambil barang</Typography.Paragraph>
+              <QRCodeSVG value={order.qr_code} size={200} style={{ margin: '0 auto' }} />
+            </div>
+          )}
 
           <Table
             rowKey="id"
