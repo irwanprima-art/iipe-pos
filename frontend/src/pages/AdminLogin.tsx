@@ -1,4 +1,4 @@
-import { Card, Form, Input, Button, Typography, message } from 'antd'
+import { Card, Form, Input, Button, message } from 'antd'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { api, setToken, setUser, token, clearToken } from '../api'
 
@@ -18,10 +18,7 @@ export default function AdminLogin() {
   }
   return (
     <Card title="Login Admin / Staff" style={{ maxWidth: 420, margin: '60px auto' }}>
-      <Typography.Paragraph type="secondary">
-        Seed admin: <b>admin@iipe.dev</b> / <b>admin123</b> (jalankan Seed di Dashboard jika belum ada)
-      </Typography.Paragraph>
-      <Form layout="vertical" onFinish={onFinish} initialValues={{ email: 'admin@iipe.dev', password: 'admin123' }}>
+      <Form layout="vertical" onFinish={onFinish}>
         <Form.Item name="email" label="Email" rules={[{ required: true }]}>
           <Input />
         </Form.Item>
