@@ -33,9 +33,10 @@ func (s *Server) loadProduct(ctx context.Context, id int64) (domain.Product, err
 		return pr, err
 	}
 	pr.Images = s.rewriteImages(imgs)
+	// Link yang dipakai: pakai affiliate bila diisi manual, selain itu link asli.
 	pr.AffiliateLink = pr.CustomAffiliateLink
 	if pr.AffiliateLink == "" {
-		pr.AffiliateLink = s.aff.Convert(pr.MarketplaceLink)
+		pr.AffiliateLink = pr.MarketplaceLink
 	}
 	if pr.IsBundle {
 		rows, err := s.pool.Query(ctx, `
@@ -90,6 +91,7 @@ func (s *Server) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 		BarcodeCarton   string   `json:"barcode_carton"`
 		QtyPerCarton    int      `json:"qty_per_carton"`
 		MarketplaceLink string   `json:"marketplace_link"`
+		CustomAffiliateLink string `json:"custom_affiliate_link"`
 		Images          []string `json:"images"`
 	}
 	if err := readJSON(r, &body); err != nil {
@@ -105,10 +107,10 @@ func (s *Server) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	var id int64
 	err := s.pool.QueryRow(r.Context(), `
-		INSERT INTO products (sku, name, category, description, barcode_pcs, barcode_carton, qty_per_carton, marketplace_link, images)
-		VALUES ($1,$2,$3,$4,NULLIF($5,''),NULLIF($6,''),$7,$8,$9) RETURNING id`,
+		INSERT INTO products (sku, name, category, description, barcode_pcs, barcode_carton, qty_per_carton, marketplace_link, custom_affiliate_link, images)
+		VALUES ($1,$2,$3,$4,NULLIF($5,''),NULLIF($6,''),$7,$8,NULLIF($9,''),$10) RETURNING id`,
 		body.SKU, body.Name, body.Category, body.Description, body.BarcodePCS, body.BarcodeCarton,
-		body.QtyPerCarton, body.MarketplaceLink, body.Images).Scan(&id)
+		body.QtyPerCarton, body.MarketplaceLink, body.CustomAffiliateLink, body.Images).Scan(&id)
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return
@@ -135,6 +137,7 @@ func (s *Server) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		BarcodeCarton   *string  `json:"barcode_carton"`
 		QtyPerCarton    *int     `json:"qty_per_carton"`
 		MarketplaceLink *string  `json:"marketplace_link"`
+		CustomAffiliateLink *string `json:"custom_affiliate_link"`
 		Images          []string `json:"images"`
 	}
 	if err := readJSON(r, &body); err != nil {
@@ -160,7 +163,10 @@ func (s *Server) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET qty_per_carton=$1 WHERE id=$2`, *body.QtyPerCarton, id)
 	}
 	if body.MarketplaceLink != nil {
-		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET marketplace_link=$1 WHERE id=$2`, *body.MarketplaceLink, id)
+		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET marketplace_link=NULLIF($1,'') WHERE id=$2`, *body.MarketplaceLink, id)
+	}
+	if body.CustomAffiliateLink != nil {
+		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET custom_affiliate_link=NULLIF($1,'') WHERE id=$2`, *body.CustomAffiliateLink, id)
 	}
 	if len(body.Images) > 0 {
 		_, _ = s.pool.Exec(r.Context(), `UPDATE products SET images=$1 WHERE id=$2`, body.Images, id)

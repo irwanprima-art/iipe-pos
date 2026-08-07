@@ -6,7 +6,7 @@ export interface Component { product_id: number; sku: string; name: string; qty:
 export interface Product {
   id: number; sku: string; name: string; category: string; description: string
   barcode_pcs: string; barcode_carton: string; qty_per_carton: number
-  marketplace_link: string; affiliate_link: string; is_bundle: boolean; images: string[]
+  marketplace_link: string; custom_affiliate_link: string; affiliate_link: string; is_bundle: boolean; images: string[]
   components?: Component[]
 }
 export interface EventProduct {

@@ -25,7 +25,7 @@ export default function AdminProducts() {
     form.setFieldsValue({
       sku: p.sku, name: p.name, category: p.category, description: p.description,
       barcode_pcs: p.barcode_pcs, barcode_carton: p.barcode_carton, qty_per_carton: p.qty_per_carton,
-      marketplace_link: p.marketplace_link, images: p.images || [],
+      marketplace_link: p.marketplace_link, custom_affiliate_link: p.custom_affiliate_link, images: p.images || [],
     })
     setActiveAffiliate(p.affiliate_link || '')
     setOpen(true)
@@ -103,9 +103,12 @@ export default function AdminProducts() {
           <Form.Item name="marketplace_link" label="Link Shopee (opsional)">
             <Input placeholder="https://shopee.co.id/product/..." />
           </Form.Item>
+          <Form.Item name="custom_affiliate_link" label="Link Affiliate (opsional)">
+            <Input placeholder="Tempel link affiliate di sini (kosongkan jika tidak ada)" />
+          </Form.Item>
           {activeAffiliate && (
             <Typography.Paragraph style={{ marginBottom: 16 }} type="secondary" copyable>
-              Link affiliate aktif: {activeAffiliate}
+              Link aktif di toko: {activeAffiliate}
             </Typography.Paragraph>
           )}
           <Form.Item name="images" label="Foto Produk (yang pertama = foto depan)">

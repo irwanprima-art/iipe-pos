@@ -15,7 +15,6 @@ import AdminBundles from './pages/AdminBundles'
 import AdminEvents from './pages/AdminEvents'
 import AdminOrders from './pages/AdminOrders'
 import AdminStock from './pages/AdminStock'
-import AdminShopee from './pages/AdminShopee'
 import AdminCustomers from './pages/AdminCustomers'
 import PosPage from './pages/PosPage'
 import FulfillPage from './pages/FulfillPage'
@@ -72,7 +71,6 @@ function AdminLayout() {
     { key: '/admin/events', label: <Link to="/admin/events">Event & Katalog</Link> },
     { key: '/admin/orders', label: <Link to="/admin/orders">Order</Link> },
     { key: '/admin/stock', label: <Link to="/admin/stock">Stok</Link> },
-    { key: '/admin/shopee', label: <Link to="/admin/shopee">Shopee Link</Link> },
     { key: '/admin/customers', label: <Link to="/admin/customers">Customer</Link> },
   ]
   return (
@@ -92,7 +90,6 @@ function AdminLayout() {
           <Route path="/events" element={<AdminEvents />} />
           <Route path="/orders" element={<AdminOrders />} />
           <Route path="/stock" element={<AdminStock />} />
-          <Route path="/shopee" element={<AdminShopee />} />
           <Route path="/customers" element={<AdminCustomers />} />
         </Routes>
       </Content>

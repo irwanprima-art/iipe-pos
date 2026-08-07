@@ -168,9 +168,10 @@ func (s *Server) eventProduct(ctx context.Context, eventID, productID int64) (do
 		return ep, err
 	}
 	pr.Images = s.rewriteImages(imgs)
+	// Link yang dipakai: pakai affiliate bila diisi manual, selain itu link asli.
 	pr.AffiliateLink = pr.CustomAffiliateLink
 	if pr.AffiliateLink == "" {
-		pr.AffiliateLink = s.aff.Convert(pr.MarketplaceLink)
+		pr.AffiliateLink = pr.MarketplaceLink
 	}
 	ep.Product = &pr
 
