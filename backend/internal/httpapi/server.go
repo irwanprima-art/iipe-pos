@@ -13,18 +13,18 @@ import (
 )
 
 type Server struct {
-	pool    *pgxpool.Pool
-	cfg     config.Config
-	auth    *service.Auth
-	stock   *service.Stock
-	orders  *service.Orders
-	pay     *service.Payments
-	aff     *service.Affiliate
-	notify  *service.Notifier
-	seed    *service.Seeder
-	storage *service.Storage
+	pool      *pgxpool.Pool
+	cfg       config.Config
+	auth      *service.Auth
+	stock     *service.Stock
+	orders    *service.Orders
+	pay       *service.Payments
+	aff       *service.Affiliate
+	notify    *service.Notifier
+	seed      *service.Seeder
+	storage   *service.Storage
 	customers *service.Customers
-	uploads http.Handler
+	uploads   http.Handler
 }
 
 func NewServer(pool *pgxpool.Pool, cfg config.Config) *Server {
@@ -107,6 +107,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/admin/events/{id}/products", s.requireAuth(s.handleEventProducts, "admin"))
 	mux.HandleFunc("POST /api/v1/admin/events/{id}/products", s.requireAuth(s.handleAddEventProduct, "admin"))
 	mux.HandleFunc("POST /api/v1/admin/events/{id}/products/{pid}/stock", s.requireAuth(s.handleAdjustStock, "admin"))
+	mux.HandleFunc("POST /api/v1/admin/events/{id}/products/{pid}/inbound", s.requireAuth(s.handleStockInbound, "admin"))
+	mux.HandleFunc("GET /api/v1/admin/stock/movements", s.requireAuth(s.handleStockMovements, "admin"))
 	mux.HandleFunc("GET /api/v1/admin/orders", s.requireAuth(s.handleListOrders, "admin"))
 	mux.HandleFunc("GET /api/v1/admin/orders/{id}", s.requireAuth(s.handleGetOrder, "admin"))
 	mux.HandleFunc("GET /api/v1/admin/stock", s.requireAuth(s.handleStockList, "admin"))

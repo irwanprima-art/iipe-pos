@@ -147,6 +147,28 @@ func (s *Stock) Adjust(ctx context.Context, eventID, productID, newTotal int64, 
 	return tx.Commit(ctx)
 }
 
+// Inbound menambah stok fisik (terima barang masuk) dengan pencatatan ledger.
+func (s *Stock) Inbound(ctx context.Context, eventID, productID, qty int64, reason string) error {
+	if qty <= 0 {
+		return fmt.Errorf("qty harus lebih dari 0")
+	}
+	if reason == "" {
+		return fmt.Errorf("alasan wajib diisi")
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `UPDATE event_products SET stock_total = stock_total + $1 WHERE event_id=$2 AND product_id=$3`, qty, eventID, productID); err != nil {
+		return err
+	}
+	if err := insertMovement(ctx, tx, eventID, productID, qty, "IN", "", 0, reason); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
 func reservedTx(ctx context.Context, tx pgx.Tx, eventID, productID int64) (int, error) {
 	var r int
 	err := tx.QueryRow(ctx, `

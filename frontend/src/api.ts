@@ -21,6 +21,11 @@ export interface EventProduct {
   event_id: number; product_id: number; price: number; stock_total: number
   available: number; reserved: number; sold: number; is_active: boolean; product?: Product
 }
+export interface StockMovement {
+  id: number; event_id: number; event_name: string; product_id: number
+  sku: string; product: string; type: string; qty: number
+  ref_type: string; ref_id: number; reason: string; created_at: string
+}
 export interface OrderItem { id: number; item_type: string; parent_id?: number; product_id: number; sku: string; name: string; qty: number; price: number; state: string }
 export interface Payment { id: number; order_id: number; method: string; amount: number; status: string; provider_ref: string; payment_link_url?: string; expires_at?: string }
 export interface Order {

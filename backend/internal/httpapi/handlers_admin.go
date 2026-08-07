@@ -83,16 +83,16 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		SKU             string   `json:"sku"`
-		Name            string   `json:"name"`
-		Category        string   `json:"category"`
-		Description     string   `json:"description"`
-		BarcodePCS      string   `json:"barcode_pcs"`
-		BarcodeCarton   string   `json:"barcode_carton"`
-		QtyPerCarton    int      `json:"qty_per_carton"`
-		MarketplaceLink string   `json:"marketplace_link"`
-		CustomAffiliateLink string `json:"custom_affiliate_link"`
-		Images          []string `json:"images"`
+		SKU                 string   `json:"sku"`
+		Name                string   `json:"name"`
+		Category            string   `json:"category"`
+		Description         string   `json:"description"`
+		BarcodePCS          string   `json:"barcode_pcs"`
+		BarcodeCarton       string   `json:"barcode_carton"`
+		QtyPerCarton        int      `json:"qty_per_carton"`
+		MarketplaceLink     string   `json:"marketplace_link"`
+		CustomAffiliateLink string   `json:"custom_affiliate_link"`
+		Images              []string `json:"images"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
@@ -130,15 +130,15 @@ func (s *Server) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Name            *string  `json:"name"`
-		Category        *string  `json:"category"`
-		Description     *string  `json:"description"`
-		BarcodePCS      *string  `json:"barcode_pcs"`
-		BarcodeCarton   *string  `json:"barcode_carton"`
-		QtyPerCarton    *int     `json:"qty_per_carton"`
-		MarketplaceLink *string  `json:"marketplace_link"`
-		CustomAffiliateLink *string `json:"custom_affiliate_link"`
-		Images          []string `json:"images"`
+		Name                *string  `json:"name"`
+		Category            *string  `json:"category"`
+		Description         *string  `json:"description"`
+		BarcodePCS          *string  `json:"barcode_pcs"`
+		BarcodeCarton       *string  `json:"barcode_carton"`
+		QtyPerCarton        *int     `json:"qty_per_carton"`
+		MarketplaceLink     *string  `json:"marketplace_link"`
+		CustomAffiliateLink *string  `json:"custom_affiliate_link"`
+		Images              []string `json:"images"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
@@ -486,11 +486,11 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Name     *string   `json:"name"`
-		Location *string   `json:"location"`
-		IsActive *bool     `json:"is_active"`
-		Lat      *float64  `json:"lat"`
-		Lng      *float64  `json:"lng"`
+		Name     *string  `json:"name"`
+		Location *string  `json:"location"`
+		IsActive *bool    `json:"is_active"`
+		Lat      *float64 `json:"lat"`
+		Lng      *float64 `json:"lng"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
@@ -684,6 +684,76 @@ func (s *Server) handleStockList(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			out = append(out, ep)
 		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// handleStockInbound: terima barang masuk — tambah stok fisik + catat ledger (type IN).
+func (s *Server) handleStockInbound(w http.ResponseWriter, r *http.Request) {
+	eventID, err := pathID(r, "id")
+	if err != nil {
+		writeErr(w, 400, "id tidak valid")
+		return
+	}
+	pid, err := pathID(r, "pid")
+	if err != nil {
+		writeErr(w, 400, "pid tidak valid")
+		return
+	}
+	var body struct {
+		Qty    int64  `json:"qty"`
+		Reason string `json:"reason"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeErr(w, 400, "bad request")
+		return
+	}
+	if body.Qty <= 0 {
+		writeErr(w, 400, "qty harus lebih dari 0")
+		return
+	}
+	if body.Reason == "" {
+		writeErr(w, 400, "alasan wajib diisi")
+		return
+	}
+	if err := s.stock.Inbound(r.Context(), eventID, pid, body.Qty, body.Reason); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	ep, err := s.eventProduct(r.Context(), eventID, pid)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, ep)
+}
+
+// handleStockMovements: inventory log (ledger stock_movements), filter event_id & product_id opsional.
+func (s *Server) handleStockMovements(w http.ResponseWriter, r *http.Request) {
+	eventID := queryInt(r, "event_id")
+	productID := queryInt(r, "product_id")
+	rows, err := s.pool.Query(r.Context(), `
+		SELECT sm.id, sm.event_id, e.name, sm.product_id, p.sku, p.name, sm.type, sm.qty,
+		       COALESCE(sm.ref_type,''), COALESCE(sm.ref_id,0), COALESCE(sm.reason,''), sm.created_at
+		FROM stock_movements sm
+		JOIN events e ON e.id = sm.event_id
+		JOIN products p ON p.id = sm.product_id
+		WHERE ($1 = 0 OR sm.event_id = $1) AND ($2 = 0 OR sm.product_id = $2)
+		ORDER BY sm.id DESC
+		LIMIT 500`, eventID, productID)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	defer rows.Close()
+	var out []domain.StockMovement
+	for rows.Next() {
+		var m domain.StockMovement
+		if err := rows.Scan(&m.ID, &m.EventID, &m.EventName, &m.ProductID, &m.SKU, &m.Product, &m.Type, &m.Qty, &m.RefType, &m.RefID, &m.Reason, &m.CreatedAt); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+		out = append(out, m)
 	}
 	writeJSON(w, http.StatusOK, out)
 }
