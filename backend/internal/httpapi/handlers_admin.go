@@ -692,18 +692,24 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var d domain.Dashboard
 	d.RevenueByMethod = map[string]int{}
+	d.MethodCount = map[string]int{}
 	_ = s.pool.QueryRow(ctx, `SELECT COALESCE(SUM(total),0) FROM orders WHERE status IN ('completed','handed_over') AND created_at::date=current_date`).Scan(&d.TodaySales)
 	_ = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders`).Scan(&d.OrderCount)
 	_ = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE status IN ('pending_payment','paid','picking','picked','packing','packed')`).Scan(&d.ActiveOrders)
 	_ = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE status='ready'`).Scan(&d.ReadyOrders)
 	_ = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE status IN ('completed','handed_over')`).Scan(&d.CompletedOrders)
-	rows, err := s.pool.Query(ctx, `SELECT COALESCE(payment_method,'-'), SUM(total) FROM orders WHERE status IN ('completed','handed_over') GROUP BY payment_method`)
+	// Pendapatan per metode + jumlah trx + biaya QRIS (0,7% dari total + Rp 300 per trx)
+	rows, err := s.pool.Query(ctx, `SELECT COALESCE(payment_method,'-'), total FROM orders WHERE status IN ('completed','handed_over')`)
 	if err == nil {
 		for rows.Next() {
 			var m string
 			var v int
 			rows.Scan(&m, &v)
-			d.RevenueByMethod[m] = v
+			d.RevenueByMethod[m] += v
+			d.MethodCount[m]++
+			if m == "qris" {
+				d.QrisFee += v*7/1000 + 300 // 0,7% (dibulatkan ke bawah) + Rp 300
+			}
 		}
 		rows.Close()
 	}

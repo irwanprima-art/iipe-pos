@@ -99,11 +99,13 @@ type Order struct {
 }
 
 type Dashboard struct {
-	TodaySales         int `json:"today_sales"`
-	OrderCount         int `json:"order_count"`
-	ActiveOrders       int `json:"active_orders"`
-	ReadyOrders        int `json:"ready_orders"`
-	CompletedOrders    int `json:"completed_orders"`
+	TodaySales         int            `json:"today_sales"`
+	OrderCount         int            `json:"order_count"`
+	ActiveOrders       int            `json:"active_orders"`
+	ReadyOrders        int            `json:"ready_orders"`
+	CompletedOrders    int            `json:"completed_orders"`
 	RevenueByMethod    map[string]int `json:"revenue_by_method"`
-	ProductsLowStock   int `json:"products_low_stock"`
+	MethodCount        map[string]int `json:"method_count"`
+	QrisFee            int            `json:"qris_fee"`
+	ProductsLowStock   int            `json:"products_low_stock"`
 }
