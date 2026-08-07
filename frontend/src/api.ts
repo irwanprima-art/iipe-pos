@@ -1,5 +1,13 @@
 const base = '/api/v1'
 
+// ---------- helpers ----------
+/** Konversi nilai form (string dari <Input type="number" />) ke number; undefined jika kosong/tidak valid */
+export function num(v: unknown): number | undefined {
+  if (v === undefined || v === null || v === '') return undefined
+  const n = Number(v)
+  return Number.isFinite(n) ? n : undefined
+}
+
 // ---------- types ----------
 export interface Event { id: number; code: string; name: string; location: string; is_active: boolean; lat?: number; lng?: number }
 export interface Component { product_id: number; sku: string; name: string; qty: number }

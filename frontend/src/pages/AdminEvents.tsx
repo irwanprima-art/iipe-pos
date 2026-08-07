@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Button, Modal, Form, Input, Switch, Space, Tag, message, Drawer, Select } from 'antd'
-import { api, Event, EventProduct, Product, fmtRp } from '../api'
+import { api, num, Event, EventProduct, Product, fmtRp } from '../api'
 
 export default function AdminEvents() {
   const [rows, setRows] = useState<Event[]>([])
@@ -33,7 +33,7 @@ export default function AdminEvents() {
   async function createEvent() {
     const v = await form.validateFields()
     try {
-      await api.post('/admin/events', { code: v.code, name: v.name, location: v.location, is_active: true, lat: v.lat, lng: v.lng })
+      await api.post('/admin/events', { code: v.code, name: v.name, location: v.location, is_active: true, lat: num(v.lat), lng: num(v.lng) })
       message.success('Event dibuat')
       setOpen(false)
       load()
@@ -49,7 +49,7 @@ export default function AdminEvents() {
     if (!editing) return
     const v = await editForm.validateFields()
     try {
-      await api.patch(`/admin/events/${editing.id}`, { name: v.name, location: v.location, lat: v.lat, lng: v.lng })
+      await api.patch(`/admin/events/${editing.id}`, { name: v.name, location: v.location, lat: num(v.lat), lng: num(v.lng) })
       message.success('Event diperbarui')
       setEditing(null)
       load()
@@ -60,7 +60,7 @@ export default function AdminEvents() {
     if (!drawerEvent) return
     const v = await addForm.validateFields()
     try {
-      await api.post(`/admin/events/${drawerEvent.id}/products`, { product_id: v.product_id, price: v.price, stock_total: v.stock_total || 0, is_active: true })
+      await api.post(`/admin/events/${drawerEvent.id}/products`, { product_id: v.product_id, price: num(v.price) ?? 0, stock_total: num(v.stock_total) ?? 0, is_active: true })
       message.success('Produk ditambahkan ke event')
       addForm.resetFields()
       openDrawer(drawerEvent)

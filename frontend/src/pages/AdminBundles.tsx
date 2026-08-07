@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Button, Modal, Form, Input, Select, Space, Tag, message } from 'antd'
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons'
-import { api, Product } from '../api'
+import { api, num, Product } from '../api'
 
 export default function AdminBundles() {
   const [rows, setRows] = useState<Product[]>([])
@@ -25,7 +25,7 @@ export default function AdminBundles() {
       await api.post('/admin/bundles', {
         sku: v.sku, name: v.name, barcode_pcs: v.barcode_pcs, category: v.category,
         images: (v.images || '').split('\n').map((s: string) => s.trim()).filter(Boolean),
-        components: (v.components || []).map((c: any) => ({ product_id: c.product_id, qty: c.qty || 1 })),
+        components: (v.components || []).map((c: any) => ({ product_id: c.product_id, qty: num(c.qty) ?? 1 })),
       })
       message.success('Bundle dibuat')
       setOpen(false)
