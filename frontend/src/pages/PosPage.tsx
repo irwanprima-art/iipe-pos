@@ -166,6 +166,7 @@ export default function PosPage() {
           <Card size="small" title="Keranjang POS" extra={<Statistic title="Total" value={total} formatter={(v) => fmtRp(Number(v))} style={{ fontSize: 12 }} />}>
             <Table
               size="small" pagination={false} rowKey="product_id"
+              scroll={{ x: 'max-content' }}
               dataSource={lines}
               locale={{ emptyText: 'Belum ada item' }}
               columns={[

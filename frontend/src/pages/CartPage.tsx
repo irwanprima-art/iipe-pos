@@ -58,6 +58,7 @@ export default function CartPage() {
       <Table
         rowKey="product_id"
         pagination={false}
+        scroll={{ x: 'max-content' }}
         dataSource={cart.lines}
         columns={[
           { title: 'Produk', dataIndex: 'name' },
@@ -74,9 +75,9 @@ export default function CartPage() {
           },
         ]}
       />
-      <Space style={{ marginTop: 16, justifyContent: 'space-between', width: '100%' }}>
+      <Space style={{ marginTop: 16, justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: 8 }}>
         <Typography.Text strong style={{ fontSize: 18 }}>Total: {fmtRp(total)}</Typography.Text>
-        <Space>
+        <Space wrap>
           <Button onClick={() => nav('/')}>Lanjut belanja</Button>
           <Button type="primary" onClick={() => nav('/checkout')}>Checkout</Button>
         </Space>
