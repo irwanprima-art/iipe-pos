@@ -437,6 +437,9 @@ func (o *Orders) PickItem(ctx context.Context, orderID, productID, qty int64, ac
 	}
 	return tx.Commit(ctx)
 }
+
+// Pack menandai order packed dan memberi nomor pickup berurutan per event.
+func (o *Orders) Pack(ctx context.Context, orderID int64, actor string) (int, error) {
 	tx, err := o.pool.Begin(ctx)
 	if err != nil {
 		return 0, err
