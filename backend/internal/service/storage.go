@@ -54,9 +54,20 @@ func (s *Storage) Put(ctx context.Context, key string, r io.Reader, size int64, 
 	if err != nil {
 		return "", err
 	}
-	base := s.publicURL
-	if base == "" {
-		base = "https://" + s.client.EndpointURL().Host
+	// Kembalikan path relatif yang disajikan lewat proxy backend (/api/v1/images/...),
+	// karena objek S3 umumnya TIDAK publik-readable (GET butuh credential).
+	return "/api/v1/images/" + key, nil
+}
+
+// Get mengambil objek dari S3 untuk diproksi ke client (tanpa butuh akses publik).
+func (s *Storage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
 	}
-	return fmt.Sprintf("%s/%s/%s", base, s.bucket, key), nil
+	if _, err := obj.Stat(); err != nil {
+		obj.Close()
+		return nil, err
+	}
+	return obj, nil
 }

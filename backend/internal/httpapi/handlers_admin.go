@@ -32,7 +32,7 @@ func (s *Server) loadProduct(ctx context.Context, id int64) (domain.Product, err
 	if err != nil {
 		return pr, err
 	}
-	pr.Images = imgs
+	pr.Images = s.rewriteImages(imgs)
 	pr.AffiliateLink = pr.CustomAffiliateLink
 	if pr.AffiliateLink == "" {
 		pr.AffiliateLink = s.aff.Convert(pr.MarketplaceLink)

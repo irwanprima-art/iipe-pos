@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Button, Modal, Form, Input, InputNumber, Tag, Space, message, Typography, Upload } from 'antd'
-import { ShopOutlined, UploadOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Modal, Form, Input, InputNumber, Tag, Space, message, Typography, Upload, Tooltip } from 'antd'
+import { ShopOutlined, UploadOutlined, StarOutlined, DeleteOutlined } from '@ant-design/icons'
 import { api, Product, token } from '../api'
 
 export default function AdminProducts() {
@@ -25,7 +25,7 @@ export default function AdminProducts() {
     form.setFieldsValue({
       sku: p.sku, name: p.name, category: p.category, description: p.description,
       barcode_pcs: p.barcode_pcs, barcode_carton: p.barcode_carton, qty_per_carton: p.qty_per_carton,
-      marketplace_link: p.marketplace_link, images: (p.images || []).join('\n'),
+      marketplace_link: p.marketplace_link, images: p.images || [],
     })
     setActiveAffiliate(p.affiliate_link || '')
     setOpen(true)
@@ -35,7 +35,7 @@ export default function AdminProducts() {
     const v = await form.validateFields()
     const payload = {
       ...v,
-      images: (v.images || '').split('\n').map((s: string) => s.trim()).filter(Boolean),
+      images: v.images || [],
       qty_per_carton: v.qty_per_carton || 1,
     }
     setSaving(true)
@@ -108,39 +108,93 @@ export default function AdminProducts() {
               Link affiliate aktif: {activeAffiliate}
             </Typography.Paragraph>
           )}
-          <Form.Item name="images" label="Gambar (satu URL per baris)">
-            <Input.TextArea rows={3} placeholder="https://...\nhttps://..." />
+          <Form.Item name="images" label="Foto Produk (yang pertama = foto depan)">
+            <ImageGallery />
           </Form.Item>
-          <Space style={{ marginBottom: 16 }}>
-            <Upload
-              accept="image/*"
-              showUploadList={false}
-              customRequest={async ({ file, onSuccess, onError }) => {
-                const fd = new FormData()
-                fd.append('file', file as any)
-                try {
-                  const res = await fetch('/api/v1/admin/uploads', {
-                    method: 'POST',
-                    headers: { Authorization: 'Bearer ' + token() },
-                    body: fd,
-                  })
-                  const data = await res.json()
-                  if (!res.ok) throw new Error(data.error || 'upload gagal')
-                  const cur = form.getFieldValue('images') || ''
-                  form.setFieldValue('images', cur ? cur + '\n' + data.url : data.url)
-                  message.success('Gambar terupload')
-                  onSuccess?.(data)
-                } catch (e: any) {
-                  message.error(e.message)
-                  onError?.(e)
-                }
-              }}
-            >
-              <Button icon={<UploadOutlined />}>Upload Gambar (S3)</Button>
-            </Upload>
-          </Space>
         </Form>
       </Modal>
     </Card>
+  )
+}
+
+// ImageGallery: preview foto yang di-upload + aksi jadikan foto depan & hapus.
+// Foto pertama (index 0) = foto depan / sampul di katalog.
+function ImageGallery({ value = [], onChange }: { value?: string[]; onChange?: (v: string[]) => void }) {
+  const imgs = value || []
+  const append = (url: string) => onChange?.([...imgs, url])
+  const setFront = (i: number) => {
+    const arr = [...imgs]
+    const [it] = arr.splice(i, 1)
+    arr.unshift(it)
+    onChange?.(arr)
+  }
+  const remove = (i: number) => {
+    const arr = [...imgs]
+    arr.splice(i, 1)
+    onChange?.(arr)
+  }
+  return (
+    <Space wrap align="start">
+      {imgs.map((u, i) => (
+        <div key={`${u}-${i}`} style={{ width: 104, textAlign: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <img
+              src={u}
+              alt=""
+              style={{
+                width: 104, height: 104, objectFit: 'cover', borderRadius: 6,
+                border: i === 0 ? '2px solid #faad14' : '1px solid #d9d9d9',
+              }}
+            />
+            {i === 0 && (
+              <Tag color="gold" style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', margin: 0 }}>
+                Foto Depan
+              </Tag>
+            )}
+          </div>
+          <Space size={4} style={{ marginTop: 8 }}>
+            {i !== 0 && (
+              <Tooltip title="Jadikan foto depan">
+                <Button size="small" icon={<StarOutlined />} onClick={() => setFront(i)} />
+              </Tooltip>
+            )}
+            <Tooltip title="Hapus">
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => remove(i)} />
+            </Tooltip>
+          </Space>
+        </div>
+      ))}
+      <Upload
+        accept="image/*"
+        showUploadList={false}
+        customRequest={async ({ file, onSuccess, onError }) => {
+          const fd = new FormData()
+          fd.append('file', file as any)
+          try {
+            const res = await fetch('/api/v1/admin/uploads', {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + token() },
+              body: fd,
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'upload gagal')
+            append(data.url)
+            message.success('Foto terupload')
+            onSuccess?.(data)
+          } catch (e: any) {
+            message.error(e.message)
+            onError?.(e)
+          }
+        }}
+      >
+        <div style={{
+          width: 104, height: 104, border: '1px dashed #d9d9d9', borderRadius: 6,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}>
+          <UploadOutlined style={{ fontSize: 22, color: '#999' }} />
+          <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>Upload Foto</div>
+        </div>
+      </Upload>
+    </Space>
   )
 }

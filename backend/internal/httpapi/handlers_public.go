@@ -167,7 +167,7 @@ func (s *Server) eventProduct(ctx context.Context, eventID, productID int64) (do
 	if err != nil {
 		return ep, err
 	}
-	pr.Images = imgs
+	pr.Images = s.rewriteImages(imgs)
 	pr.AffiliateLink = pr.CustomAffiliateLink
 	if pr.AffiliateLink == "" {
 		pr.AffiliateLink = s.aff.Convert(pr.MarketplaceLink)

@@ -89,6 +89,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/webhooks/payment", s.handlePaymentWebhook)
 	mux.HandleFunc("POST /api/v1/webhooks/sumopay", s.handleSumopayWebhook)
 	mux.HandleFunc("POST /api/v1/affiliate/convert", s.handleAffiliateConvert)
+	mux.HandleFunc("GET /api/v1/images/{key...}", s.handleImage)
 	mux.Handle("/uploads/", s.uploads)
 
 	// ---- admin (role admin) ----
