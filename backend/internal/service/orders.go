@@ -644,7 +644,7 @@ func (o *Orders) List(ctx context.Context, status string, eventID int64) ([]doma
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Order
+	out := []domain.Order{}
 	for rows.Next() {
 		var id int64
 		rows.Scan(&id)
@@ -663,7 +663,7 @@ func (o *Orders) ListByPhone(ctx context.Context, phone string) ([]domain.Order,
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Order
+	out := []domain.Order{}
 	for rows.Next() {
 		var id int64
 		rows.Scan(&id)

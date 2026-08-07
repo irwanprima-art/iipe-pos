@@ -88,7 +88,7 @@ func (s *Server) handleFulfillmentOrders(w http.ResponseWriter, r *http.Request)
 		writeErr(w, 500, err.Error())
 		return
 	}
-	var out []any
+	out := []any{}
 	for _, o := range orders {
 		switch o.Status {
 		case "paid", "picking", "picked", "packing", "packed", "ready":

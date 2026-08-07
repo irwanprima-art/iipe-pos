@@ -40,7 +40,7 @@ func (s *Server) handleStoreEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	var out []domain.Event
+	out := []domain.Event{}
 	for rows.Next() {
 		var e domain.Event
 		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.Lat, &e.Lng); err != nil {
@@ -73,7 +73,7 @@ func (s *Server) handleStoreProducts(w http.ResponseWriter, r *http.Request) {
 	}
 	rows.Close()
 
-	var out []domain.EventProduct
+	out := []domain.EventProduct{}
 	for _, id := range ids {
 		ep, err := s.eventProduct(r.Context(), eventID, id)
 		if err == nil {
@@ -142,7 +142,7 @@ func (s *Server) handleSuggestions(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, pid)
 	}
 	rows.Close()
-	var out []domain.EventProduct
+	out := []domain.EventProduct{}
 	for _, pid := range ids {
 		ep, err := s.eventProduct(r.Context(), eventID, pid)
 		if err == nil {

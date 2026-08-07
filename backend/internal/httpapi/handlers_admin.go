@@ -71,7 +71,7 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, id)
 	}
 	rows.Close()
-	var out []domain.Product
+	out := []domain.Product{}
 	for _, id := range ids {
 		pr, err := s.loadProduct(r.Context(), id)
 		if err == nil {
@@ -318,7 +318,7 @@ func (s *Server) handleShopeeList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	var out []shopeeRow
+	out := []shopeeRow{}
 	for rows.Next() {
 		var rw shopeeRow
 		if err := rows.Scan(&rw.ID, &rw.SKU, &rw.Name, &rw.MarketplaceLink, &rw.CustomAffiliateLink); err != nil {
@@ -441,7 +441,7 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	var out []domain.Event
+	out := []domain.Event{}
 	for rows.Next() {
 		var e domain.Event
 		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.Lat, &e.Lng); err != nil {
@@ -537,7 +537,7 @@ func (s *Server) handleEventProducts(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, id)
 	}
 	rows.Close()
-	var out []domain.EventProduct
+	out := []domain.EventProduct{}
 	for _, id := range ids {
 		ep, err := s.eventProduct(r.Context(), eventID, id)
 		if err == nil {
@@ -678,7 +678,7 @@ func (s *Server) handleStockList(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, id)
 	}
 	rows.Close()
-	var out []domain.EventProduct
+	out := []domain.EventProduct{}
 	for _, id := range ids {
 		ep, err := s.eventProduct(r.Context(), eventID, id)
 		if err == nil {
@@ -748,7 +748,7 @@ func (s *Server) handleStockMovements(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	var out []domain.StockMovement
+	out := []domain.StockMovement{}
 	for rows.Next() {
 		var m domain.StockMovement
 		if err := rows.Scan(&m.ID, &m.EventID, &m.EventName, &m.ProductID, &m.SKU, &m.Product, &m.Type, &m.Qty, &m.RefType, &m.RefID, &m.Reason, &m.Actor, &m.RefNo, &m.CreatedAt); err != nil {
@@ -814,7 +814,7 @@ func (s *Server) handleListCustomers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	var out []map[string]any
+	out := []map[string]any{}
 	for rows.Next() {
 		var id int64
 		var name, phone string

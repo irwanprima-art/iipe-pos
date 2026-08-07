@@ -27,7 +27,7 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 		Role      string    `json:"role"`
 		CreatedAt time.Time `json:"created_at"`
 	}
-	var out []userRow
+	out := []userRow{}
 	for rows.Next() {
 		var u userRow
 		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.CreatedAt); err != nil {

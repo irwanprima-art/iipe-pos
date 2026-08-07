@@ -15,7 +15,8 @@ export default function FulfillPage() {
   function load() {
     setLoading(true)
     api.get<Order[]>(`/fulfillment/orders?event_id=${eventId || ''}`)
-      .then(setOrders).catch((e) => message.error(e.message)).finally(() => setLoading(false))
+      .then((res) => setOrders(Array.isArray(res) ? res : []))
+      .catch((e) => message.error(e.message)).finally(() => setLoading(false))
   }
   useEffect(() => { api.get<Event[]>('/store/events').then((e) => { setEvents(e); if (e.length) setEventId(e[0].id) }) }, [])
   useEffect(load, [eventId])
