@@ -56,9 +56,10 @@ type eventProductLite struct {
 
 func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		EventID int64              `json:"event_id"`
-		Method  string             `json:"method"`
-		Items   []service.CartItem `json:"items"`
+		EventID      int64              `json:"event_id"`
+		Method       string             `json:"method"`
+		CustomerName string             `json:"customer_name"`
+		Items        []service.CartItem `json:"items"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
@@ -68,7 +69,7 @@ func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "metode pembayaran harus qris atau edc (cashless)")
 		return
 	}
-	order, err := s.orders.PosCheckout(r.Context(), body.EventID, body.Method, body.Items, actorName(r))
+	order, err := s.orders.PosCheckout(r.Context(), body.EventID, body.Method, body.Items, body.CustomerName, actorName(r))
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return

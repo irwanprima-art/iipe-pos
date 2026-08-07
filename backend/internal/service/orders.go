@@ -188,9 +188,12 @@ func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, 
 }
 
 // PosCheckout membuat order POS yang langsung selesai (handed over) dengan stock PICK langsung.
-func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, items []CartItem, actor string) (domain.Order, error) {
+func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, items []CartItem, customerName, actor string) (domain.Order, error) {
 	if len(items) == 0 {
 		return domain.Order{}, errors.New("keranjang kosong")
+	}
+	if customerName == "" {
+		customerName = "Kasir POS"
 	}
 	tx, err := o.pool.Begin(ctx)
 	if err != nil {
@@ -274,7 +277,7 @@ func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, 
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO orders (order_no, event_id, channel, status, customer_name, customer_phone, total, qr_code, payment_method)
 		VALUES ($1,$2,'pos','completed',$3,$4,$5,$6,$7) RETURNING id`,
-		orderNo, eventID, "Kasir POS", "", total, qr, method).Scan(&orderID); err != nil {
+		orderNo, eventID, customerName, "", total, qr, method).Scan(&orderID); err != nil {
 		return domain.Order{}, err
 	}
 

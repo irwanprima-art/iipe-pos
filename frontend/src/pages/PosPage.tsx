@@ -19,6 +19,7 @@ export default function PosPage() {
   const [payModal, setPayModal] = useState(false)
   const [lastOrder, setLastOrder] = useState<Order | null>(null)
   const [search, setSearch] = useState('')
+  const [custName, setCustName] = useState('')
 
   useEffect(() => { api.get<Event[]>('/store/events').then((e) => { setEvents(e); if (e.length) setEventId(e[0].id) }) }, [])
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function PosPage() {
     try {
       const order = await api.post<Order>('/pos/checkout', {
         event_id: eventId, method,
+        customer_name: custName.trim(),
         items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty, item_type: l.item_type })),
       })
       setLastOrder(order)
@@ -134,6 +136,10 @@ export default function PosPage() {
                 { title: 'Subtotal', render: (_: any, l: Line) => fmtRp(l.price * l.qty) },
                 { title: '', render: (_: any, l: Line) => <Button size="small" danger icon={<DeleteOutlined />} onClick={() => setLines((p) => p.filter((x) => x !== l))} /> },
               ]}
+            />
+            <Input
+              placeholder="Nama pembeli (opsional)" value={custName} allowClear
+              onChange={(e) => setCustName(e.target.value)} style={{ marginTop: 12 }}
             />
             <Space style={{ marginTop: 12, width: '100%', justifyContent: 'space-between' }} wrap>
               <Select value={method} onChange={setMethod} style={{ width: 130 }}
