@@ -83,7 +83,7 @@ func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleFulfillmentOrders(w http.ResponseWriter, r *http.Request) {
-	orders, err := s.orders.List(r.Context(), "", queryInt(r, "event_id"))
+	orders, err := s.orders.List(r.Context(), "", queryInt(r, "event_id"), "", "")
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
