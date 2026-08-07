@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Card, Table, Button, Input, Space, Tag, Modal, message, Statistic, Row, Col, Alert, Typography } from 'antd'
+import { Card, Table, Button, Input, Select, Space, Tag, Modal, message, Statistic, Row, Col, Alert, Typography } from 'antd'
 import { ScanOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
 import { QRCodeSVG } from 'qrcode.react'
 import { api, PosProduct, Event, Order, fmtRp } from '../api'
