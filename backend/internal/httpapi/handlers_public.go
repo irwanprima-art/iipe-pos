@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -406,34 +407,64 @@ func (s *Server) handleSumopayWebhook(w http.ResponseWriter, r *http.Request) {
 		Data map[string]any `json:"data"`
 	}
 	_ = json.Unmarshal(body, &ev)
-	pid := ""
-	if v, ok := ev.Data["payment_id"]; ok {
-		pid, _ = v.(string)
+	// log sementara untuk debugging struktur payload SumoPay (nilai TIDAK di-log)
+	keys := make([]string, 0, len(ev.Data))
+	for k := range ev.Data {
+		keys = append(keys, k)
 	}
+	log.Printf("sumopay webhook type=%q data_keys=%v", ev.Type, keys)
+	// ekstrak payment_id dari berbagai kemungkinan lokasi
+	pid := firstString(ev.Data, "payment_id", "id", "payment_reference", "reference")
 	if pid == "" {
-		if v, ok := ev.Data["id"]; ok {
-			pid, _ = v.(string)
+		if p, ok := ev.Data["payment"].(map[string]any); ok {
+			pid = firstString(p, "payment_id", "id", "payment_reference", "reference")
 		}
 	}
+	payStatus := firstString(ev.Data, "status")
 	ctx := r.Context()
+	handled := false
 	switch ev.Type {
-	case "payment.completed":
+	case "payment.completed", "payment.paid", "payment.succeeded", "payment.success":
+		handled = true
 		if pid != "" {
 			if err := s.pay.Confirm(ctx, pid); err != nil {
 				writeErr(w, 400, err.Error())
 				return
 			}
 		}
-	case "payment.failed":
+	case "payment.failed", "payment.cancelled":
+		handled = true
 		if oid, err := s.pay.SetStatus(ctx, pid, "failed"); err == nil && oid > 0 {
 			_ = s.orders.Cancel(ctx, oid, "sumopay", "pembayaran gagal")
 		}
 	case "payment.expired":
+		handled = true
 		if oid, err := s.pay.SetStatus(ctx, pid, "expired"); err == nil && oid > 0 {
 			_ = s.orders.Cancel(ctx, oid, "sumopay", "pembayaran kedaluwarsa")
 		}
 	}
+	// fallback: event generic dengan field status
+	if !handled && pid != "" {
+		switch payStatus {
+		case "completed", "paid", "success":
+			_ = s.pay.Confirm(ctx, pid)
+		case "failed", "expired", "cancelled":
+			if oid, err := s.pay.SetStatus(ctx, pid, payStatus); err == nil && oid > 0 {
+				_ = s.orders.Cancel(ctx, oid, "sumopay", "pembayaran "+payStatus)
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// firstString mengembalikan nilai string pertama yang ada dari daftar key.
+func firstString(m map[string]any, keys ...string) string {
+	for _, k := range keys {
+		if v, ok := m[k].(string); ok && v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func (s *Server) handleAffiliateConvert(w http.ResponseWriter, r *http.Request) {
