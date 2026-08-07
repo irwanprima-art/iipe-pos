@@ -51,6 +51,7 @@ export const api = {
   get: <T>(p: string) => request<T>('GET', p, undefined, token),
   post: <T>(p: string, b?: any) => request<T>('POST', p, b, token),
   patch: <T>(p: string, b?: any) => request<T>('PATCH', p, b, token),
+  del: <T>(p: string) => request<T>('DELETE', p, undefined, token),
 }
 
 // API memakai token customer (untuk "Pesanan Saya")

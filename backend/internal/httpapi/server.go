@@ -111,6 +111,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/admin/orders/{id}", s.requireAuth(s.handleGetOrder, "admin"))
 	mux.HandleFunc("GET /api/v1/admin/stock", s.requireAuth(s.handleStockList, "admin"))
 	mux.HandleFunc("GET /api/v1/admin/customers", s.requireAuth(s.handleListCustomers, "admin"))
+	mux.HandleFunc("GET /api/v1/admin/users", s.requireAuth(s.handleListUsers, "admin"))
+	mux.HandleFunc("POST /api/v1/admin/users", s.requireAuth(s.handleCreateUser, "admin"))
+	mux.HandleFunc("PATCH /api/v1/admin/users/{id}", s.requireAuth(s.handleUpdateUser, "admin"))
+	mux.HandleFunc("DELETE /api/v1/admin/users/{id}", s.requireAuth(s.handleDeleteUser, "admin"))
 	mux.HandleFunc("POST /api/v1/admin/seed", s.requireAuth(s.handleSeed, "admin"))
 
 	// ---- POS + fulfillment (semua staf) ----

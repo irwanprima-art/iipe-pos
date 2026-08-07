@@ -16,6 +16,7 @@ import AdminEvents from './pages/AdminEvents'
 import AdminOrders from './pages/AdminOrders'
 import AdminStock from './pages/AdminStock'
 import AdminCustomers from './pages/AdminCustomers'
+import AdminUsers from './pages/AdminUsers'
 import PosPage from './pages/PosPage'
 import FulfillPage from './pages/FulfillPage'
 
@@ -72,6 +73,7 @@ function AdminLayout() {
     { key: '/admin/orders', label: <Link to="/admin/orders">Order</Link> },
     { key: '/admin/stock', label: <Link to="/admin/stock">Stok</Link> },
     { key: '/admin/customers', label: <Link to="/admin/customers">Customer</Link> },
+    { key: '/admin/users', label: <Link to="/admin/users">Staff</Link> },
   ]
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -91,6 +93,7 @@ function AdminLayout() {
           <Route path="/orders" element={<AdminOrders />} />
           <Route path="/stock" element={<AdminStock />} />
           <Route path="/customers" element={<AdminCustomers />} />
+          <Route path="/users" element={<AdminUsers />} />
         </Routes>
       </Content>
     </Layout>
