@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 
 	"iipe/backend/internal/domain"
@@ -33,7 +32,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 // ---------- Storefront ----------
 
 func (s *Server) handleStoreEvents(w http.ResponseWriter, r *http.Request) {
-rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, location, is_active, lat, lng FROM events WHERE is_active ORDER BY id`)
+	rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, location, is_active, lat, lng FROM events WHERE is_active ORDER BY id`)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -335,7 +334,7 @@ func (s *Server) handlePaymentWebhook(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// handleSumopayWebhook menerima webhook SumoPay (Svix signature + X-Webhook-Token).
+// handleSumopayWebhook menerima webhook SumoPay (X-Webhook-Token).
 // Event: payment.completed | payment.failed | payment.expired | payment.test
 func (s *Server) handleSumopayWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
@@ -343,19 +342,13 @@ func (s *Server) handleSumopayWebhook(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "bad request")
 		return
 	}
-	// log nama header untuk debugging format webhook SumoPay (nilai TIDAK di-log)
-	names := make([]string, 0, len(r.Header))
-	for k := range r.Header {
-		names = append(names, k)
-	}
-	log.Printf("sumopay webhook dari %s: headers=%v", r.RemoteAddr, names)
 	// verifikasi token webhook (opsional bila dikonfigurasi)
 	if s.cfg.SumoWebhookToken != "" && r.Header.Get("X-Webhook-Token") != s.cfg.SumoWebhookToken {
 		writeErr(w, 401, "invalid webhook token")
 		return
 	}
-	// verifikasi signature Svix (opsional bila secret dikonfigurasi)
-	if s.cfg.SumoWebhookSecret != "" {
+	// verifikasi signature Svix — HANYA bila provider mengirim header Svix (SumoPay tidak).
+	if s.cfg.SumoWebhookSecret != "" && r.Header.Get("Svix-Signature") != "" {
 		if !verifyWebhookSignature(s.cfg.SumoWebhookSecret,
 			r.Header.Get("Svix-Id"), r.Header.Get("Svix-Timestamp"), r.Header.Get("Svix-Signature"), body) {
 			writeErr(w, 401, "invalid signature")
