@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Row, Col, Card, Button, Select, Input, Tooltip, Tag, Empty, Space, message, Skeleton } from 'antd'
 import { ShoppingCartOutlined, ShoppingOutlined } from '@ant-design/icons'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, Event, EventProduct, fmtRp, loadCart, saveCart, Cart } from '../api'
+import { api, Event, EventProduct, fmtRp, loadCart, saveCart, Cart, useCartCount } from '../api'
 
 const imgFallback = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#f0f0f0"/><text x="100" y="105" font-size="14" fill="#aaa" text-anchor="middle">No Image</text></svg>')
 
@@ -16,6 +16,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 export default function StoreHome() {
   const nav = useNavigate()
+  const cartCount = useCartCount()
   const [events, setEvents] = useState<Event[]>([])
   const [eventId, setEventId] = useState<number>(0)
   const [products, setProducts] = useState<EventProduct[]>([])
@@ -109,7 +110,7 @@ export default function StoreHome() {
         />
         <Input.Search placeholder="Cari produk / SKU" allowClear style={{ width: 260 }} onChange={(e) => setSearch(e.target.value)} />
         <Button type="primary" icon={<ShoppingCartOutlined />} onClick={() => nav('/cart')}>
-          Keranjang ({cart?.lines.reduce((s, l) => s + l.qty, 0) || 0})
+          Keranjang ({cartCount})
         </Button>
       </Space>
 

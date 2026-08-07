@@ -1,7 +1,8 @@
 import { type ReactNode } from 'react'
 import { Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Layout, Menu, Space, Button, Tag } from 'antd'
-import { currentUser, clearToken, token, customerToken, clearCustomerToken } from './api'
+import { Layout, Menu, Space, Button, Tag, Badge } from 'antd'
+import { ShoppingCartOutlined } from '@ant-design/icons'
+import { currentUser, clearToken, token, customerToken, clearCustomerToken, useCartCount } from './api'
 import StoreHome from './pages/StoreHome'
 import ProductDetail from './pages/ProductDetail'
 import MyOrders from './pages/MyOrders'
@@ -28,10 +29,14 @@ function TopBar() {
   const user = currentUser()
   const loggedIn = !!token()
   const hasCustomer = !!customerToken()
+  const cartCount = useCartCount()
   return (
     <Header style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#001529' }}>
       <Link to="/" style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>IIPE Bazaar</Link>
       <Space style={{ marginLeft: 'auto' }}>
+        <Badge count={cartCount} size="small" offset={[-4, 4]}>
+          <Button type="text" style={{ color: '#fff' }} icon={<ShoppingCartOutlined style={{ fontSize: 18 }} />} onClick={() => nav('/cart')} />
+        </Badge>
         {loggedIn ? (
           <>
             <Button type="text" style={{ color: '#fff' }} onClick={() => nav('/admin')}>Admin</Button>

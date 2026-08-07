@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 const base = '/api/v1'
 
 // ---------- helpers ----------
@@ -98,12 +100,39 @@ export interface CartLine { product_id: number; name: string; price: number; qty
 export interface Cart { event_id: number; lines: CartLine[] }
 
 const CART_KEY = 'iipe_cart'
+const CART_EVENT = 'iipe:cart-changed'
+
 export function loadCart(): Cart | null {
   const raw = localStorage.getItem(CART_KEY)
   return raw ? JSON.parse(raw) : null
 }
-export function saveCart(c: Cart) { localStorage.setItem(CART_KEY, JSON.stringify(c)) }
-export function clearCart() { localStorage.removeItem(CART_KEY) }
+export function saveCart(c: Cart) {
+  localStorage.setItem(CART_KEY, JSON.stringify(c))
+  window.dispatchEvent(new Event(CART_EVENT))
+}
+export function clearCart() {
+  localStorage.removeItem(CART_KEY)
+  window.dispatchEvent(new Event(CART_EVENT))
+}
+
+/** Jumlah item di keranjang, reaktif terhadap perubahan dari halaman mana pun. */
+export function useCartCount(): number {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    const calc = () => {
+      const c = loadCart()
+      setCount(c ? c.lines.reduce((s, l) => s + l.qty, 0) : 0)
+    }
+    calc()
+    window.addEventListener(CART_EVENT, calc)
+    window.addEventListener('storage', calc)
+    return () => {
+      window.removeEventListener(CART_EVENT, calc)
+      window.removeEventListener('storage', calc)
+    }
+  }, [])
+  return count
+}
 
 export const STATUS_LABEL: Record<string, string> = {
   pending_payment: 'Menunggu Pembayaran',
