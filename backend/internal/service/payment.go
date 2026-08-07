@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -73,9 +74,6 @@ type sumopayCreateResp struct {
 }
 
 func (p *Payments) createSumopay(ctx context.Context, orderID int64, amount int, ref string) (domain.Payment, error) {
-	// Ambil qr_code order sebagai token untuk halaman redirect hasil pembayaran.
-	var qrCode string
-	_ = p.pool.QueryRow(ctx, `SELECT qr_code FROM orders WHERE id=$1`, orderID).Scan(&qrCode)
 	body := map[string]any{
 		"order_id":                 ref,
 		"amount":                   amount,
@@ -83,9 +81,11 @@ func (p *Payments) createSumopay(ctx context.Context, orderID int64, amount int,
 		"expires_in_hours":         24,
 		"payment_method_type_code": "QRIS",
 	}
+	// Redirect hasil pembayaran. SumoPay menambahkan &order_id=...&status=... sendiri,
+	// jadi kirim order_id (order_no) sebagai param agar halaman tahu order mana.
 	if p.baseURL != "" {
-		body["success_return_url"] = p.baseURL + "/payment/result?token=" + qrCode + "&result=success"
-		body["cancel_return_url"] = p.baseURL + "/payment/result?token=" + qrCode + "&result=cancelled"
+		body["success_return_url"] = p.baseURL + "/payment/result?result=success&order_id=" + url.QueryEscape(ref)
+		body["cancel_return_url"] = p.baseURL + "/payment/result?result=cancelled&order_id=" + url.QueryEscape(ref)
 	}
 	payload, _ := json.Marshal(body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.sumoURL+"/api/v1/payments", bytes.NewReader(payload))

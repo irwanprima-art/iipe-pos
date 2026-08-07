@@ -5,21 +5,27 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { api, Order, fmtRp, STATUS_LABEL } from '../api'
 
 // Halaman redirect dari SumoPay setelah customer selesai / membatalkan pembayaran.
-// Query: ?token=<qr_code order>&result=success|cancelled
+// SumoPay menambahkan query &order_id=<order_no>&status=<status>; kita juga kirim result.
+// Query: ?token=<qr_code>&result=... ATAU ?order_id=<order_no>&result=...&status=...
 export default function PaymentResultPage() {
   const [params] = useSearchParams()
   const token = params.get('token') || ''
-  const result = params.get('result') || ''
+  const orderId = params.get('order_id') || ''
+  const ref = orderId || token // order_no atau qr_code (keduanya didukung /orders/status/{x})
+  const rawResult = params.get('result') || ''
+  const status = params.get('status') || ''
+  // result default dari status yang dikirim SumoPay (completed/failed/expired/cancelled)
+  const result = rawResult || (status === 'completed' ? 'success' : (status === 'cancelled' || status === 'failed' || status === 'expired') ? 'cancelled' : '')
   const [order, setOrder] = useState<Order | null>(null)
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(false)
   const attempts = useRef(0)
 
   function load() {
-    if (!token) { setError('Link pembayaran tidak valid.'); return }
-    api.get<Order>(`/orders/status/${token}`).then(setOrder).catch((e) => setError(e.message))
+    if (!ref) { setError('Link pembayaran tidak valid.'); return }
+    api.get<Order>(`/orders/status/${ref}`).then(setOrder).catch((e) => setError(e.message))
   }
-  useEffect(load, [token])
+  useEffect(load, [ref])
 
   // Jika redirect "success" tapi order masih pending (webhook belum proses), polling sebentar.
   useEffect(() => {
@@ -28,21 +34,21 @@ export default function PaymentResultPage() {
     const t = setInterval(() => {
       attempts.current += 1
       if (attempts.current > 5) { clearInterval(t); return }
-      api.get<Order>(`/orders/status/${token}`).then((o) => { setOrder(o); if (o.status !== 'pending_payment') clearInterval(t) }).catch(() => {})
+      api.get<Order>(`/orders/status/${ref}`).then((o) => { setOrder(o); if (o.status !== 'pending_payment') clearInterval(t) }).catch(() => {})
     }, 3000)
     return () => clearInterval(t)
-  }, [order, result, token])
+  }, [order, result, ref])
 
   async function recheck() {
     setChecking(true)
     try {
-      const o = await api.get<Order>(`/orders/status/${token}`)
+      const o = await api.get<Order>(`/orders/status/${ref}`)
       setOrder(o)
       setError('')
     } catch (e: any) { setError(e.message) } finally { setChecking(false) }
   }
 
-  if (!token) return <Card style={{ maxWidth: 560, margin: '48px auto' }}><Result status="warning" title="Link tidak valid" extra={<Link to="/"><Button type="primary">Kembali ke Beranda</Button></Link>} /></Card>
+  if (!ref) return <Card style={{ maxWidth: 560, margin: '48px auto' }}><Result status="warning" title="Link tidak valid" extra={<Link to="/"><Button type="primary">Kembali ke Beranda</Button></Link>} /></Card>
   if (error) return <Card style={{ maxWidth: 560, margin: '48px auto' }}><Result status="error" title="Terjadi Kesalahan" subTitle={error} extra={<Button onClick={recheck} loading={checking}>Coba Lagi</Button>} /></Card>
   if (!order) return <Card loading style={{ maxWidth: 560, margin: '48px auto' }} />
 
@@ -65,7 +71,7 @@ export default function PaymentResultPage() {
             }
             extra={
               <Space wrap>
-                <Link to={`/status/${token}`}><Button type="primary">Lihat Status Order</Button></Link>
+                <Link to={`/status/${ref}`}><Button type="primary">Lihat Status Order</Button></Link>
                 <Link to="/"><Button>Kembali Belanja</Button></Link>
               </Space>
             }
@@ -78,7 +84,7 @@ export default function PaymentResultPage() {
             subTitle={`Order ${order.order_no} masih menunggu pembayaran. Anda bisa membayar lagi kapan saja.`}
             extra={
               <Space wrap>
-                <Link to={`/status/${token}`}><Button type="primary">Bayar / Lihat Order</Button></Link>
+                <Link to={`/status/${ref}`}><Button type="primary">Bayar / Lihat Order</Button></Link>
                 <Link to="/"><Button>Kembali Belanja</Button></Link>
               </Space>
             }
