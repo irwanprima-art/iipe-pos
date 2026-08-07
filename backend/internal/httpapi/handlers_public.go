@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"iipe/backend/internal/domain"
 	"iipe/backend/internal/service"
@@ -313,6 +314,51 @@ func (s *Server) handleOrderStatus(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, "order tidak ditemukan")
 		return
 	}
+	writeJSON(w, http.StatusOK, order)
+}
+
+// handleOrderRefresh: cek ulang status pembayaran. Bila order masih menunggu bayar
+// dan sudah lewat batas waktu (reserved_until), otomatis dibatalkan (expired).
+func (s *Server) handleOrderRefresh(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	order, err := s.orders.GetByToken(r.Context(), token)
+	if err != nil {
+		writeErr(w, 404, "order tidak ditemukan")
+		return
+	}
+	if order.Status == "pending_payment" && order.ReservedUntil != nil && time.Now().After(*order.ReservedUntil) {
+		if err := s.orders.Cancel(r.Context(), order.ID, "system", "pembayaran kedaluwarsa (melewati batas waktu)"); err == nil {
+			order, _ = s.orders.GetByToken(r.Context(), token)
+		}
+	}
+	writeJSON(w, http.StatusOK, order)
+}
+
+// handleOrderCancel: customer membatalkan pesanan yang masih menunggu pembayaran.
+func (s *Server) handleOrderCancel(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	order, err := s.orders.GetByToken(r.Context(), token)
+	if err != nil {
+		writeErr(w, 404, "order tidak ditemukan")
+		return
+	}
+	if order.Status != "pending_payment" {
+		writeErr(w, 400, "hanya pesanan yang belum dibayar yang bisa dibatalkan")
+		return
+	}
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	_ = readJSON(r, &body)
+	reason := body.Reason
+	if reason == "" {
+		reason = "dibatalkan customer"
+	}
+	if err := s.orders.Cancel(r.Context(), order.ID, "customer", reason); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	order, _ = s.orders.GetByToken(r.Context(), token)
 	writeJSON(w, http.StatusOK, order)
 }
 

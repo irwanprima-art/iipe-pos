@@ -86,6 +86,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/store/products/{id}/suggestions", s.handleSuggestions)
 	mux.HandleFunc("POST /api/v1/checkout", s.handleCheckout)
 	mux.HandleFunc("GET /api/v1/orders/status/{token}", s.handleOrderStatus)
+	mux.HandleFunc("POST /api/v1/orders/status/{token}/refresh", s.handleOrderRefresh)
+	mux.HandleFunc("POST /api/v1/orders/status/{token}/cancel", s.handleOrderCancel)
 	mux.HandleFunc("POST /api/v1/webhooks/payment", s.handlePaymentWebhook)
 	mux.HandleFunc("POST /api/v1/webhooks/sumopay", s.handleSumopayWebhook)
 	mux.HandleFunc("POST /api/v1/affiliate/convert", s.handleAffiliateConvert)

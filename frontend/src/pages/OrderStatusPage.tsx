@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Steps, Descriptions, Table, Button, message, Tag, Typography, Alert, Space } from 'antd'
+import { Card, Steps, Descriptions, Table, Button, message, Tag, Typography, Alert, Space, Modal } from 'antd'
 import { QRCodeSVG } from 'qrcode.react'
 import { useParams, Link } from 'react-router-dom'
 import { api, Order, fmtRp, STATUS_LABEL } from '../api'
@@ -11,6 +11,7 @@ export default function OrderStatusPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [error, setError] = useState('')
   const [paying, setPaying] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   function load() {
     api.get<Order>(`/orders/status/${token}`).then(setOrder).catch((e) => setError(e.message))
@@ -36,6 +37,66 @@ export default function OrderStatusPage() {
     } finally {
       setPaying(false)
     }
+  }
+
+  // Cek ulang status pembayaran (backend otomatis membatalkan bila lewat batas waktu)
+  async function refreshStatus() {
+    setBusy(true)
+    try {
+      const o = await api.post<Order>(`/orders/status/${token}/refresh`)
+      setOrder(o)
+      if (o.status === 'cancelled') message.warning('Pembayaran kedaluwarsa — pesanan dibatalkan otomatis')
+      else message.success('Status diperiksa — masih menunggu pembayaran')
+    } catch (e: any) { message.error(e.message) } finally { setBusy(false) }
+  }
+
+  // Batalkan pesanan (hanya yang belum dibayar)
+  function confirmCancel() {
+    Modal.confirm({
+      title: 'Batalkan pesanan?',
+      content: `Order ${order.order_no} akan dibatalkan dan stok dilepas kembali.`,
+      okText: 'Ya, batalkan',
+      okButtonProps: { danger: true },
+      cancelText: 'Tidak',
+      onOk: async () => {
+        setBusy(true)
+        try {
+          const o = await api.post<Order>(`/orders/status/${token}/cancel`, { reason: 'dibatalkan customer' })
+          setOrder(o)
+          message.success('Pesanan dibatalkan')
+        } catch (e: any) { message.error(e.message) } finally { setBusy(false) }
+      },
+    })
+  }
+
+  // Cek ulang status pembayaran (backend otomatis membatalkan bila lewat batas waktu)
+  async function refreshStatus() {
+    setBusy(true)
+    try {
+      const o = await api.post<Order>(`/orders/status/${token}/refresh`)
+      setOrder(o)
+      if (o.status === 'cancelled') message.warning('Pembayaran kedaluwarsa — pesanan dibatalkan otomatis')
+      else message.success('Status diperiksa — masih menunggu pembayaran')
+    } catch (e: any) { message.error(e.message) } finally { setBusy(false) }
+  }
+
+  // Batalkan pesanan (hanya yang belum dibayar)
+  function confirmCancel() {
+    Modal.confirm({
+      title: 'Batalkan pesanan?',
+      content: `Order ${order.order_no} akan dibatalkan dan stok dilepas kembali.`,
+      okText: 'Ya, batalkan',
+      okButtonProps: { danger: true },
+      cancelText: 'Tidak',
+      onOk: async () => {
+        setBusy(true)
+        try {
+          const o = await api.post<Order>(`/orders/status/${token}/cancel`, { reason: 'dibatalkan customer' })
+          setOrder(o)
+          message.success('Pesanan dibatalkan')
+        } catch (e: any) { message.error(e.message) } finally { setBusy(false) }
+      },
+    })
   }
 
   return (
@@ -66,13 +127,19 @@ export default function OrderStatusPage() {
           />
 
           {order.status === 'pending_payment' && (
-            order.payment?.payment_link_url ? (
-              <Alert type="info" showIcon message="Menunggu pembayaran. Lanjutkan pembayaran via SumoPay."
-                action={<a href={order.payment.payment_link_url} target="_blank" rel="noreferrer"><Button size="small">Bayar Sekarang</Button></a>} />
-            ) : order.payment?.provider_ref?.startsWith('MOCK-') ? (
-              <Alert type="warning" showIcon message="Menunggu pembayaran QRIS. (Mode demo: klik tombol di bawah.)"
-                action={<Button size="small" loading={paying} onClick={simulatePay}>Simulasi Bayar</Button>} />
-            ) : null
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {order.payment?.payment_link_url ? (
+                <Alert type="info" showIcon message="Menunggu pembayaran. Lanjutkan pembayaran via SumoPay."
+                  action={<a href={order.payment.payment_link_url} target="_blank" rel="noreferrer"><Button size="small">Bayar Sekarang</Button></a>} />
+              ) : order.payment?.provider_ref?.startsWith('MOCK-') ? (
+                <Alert type="warning" showIcon message="Menunggu pembayaran QRIS. (Mode demo: klik tombol di bawah.)"
+                  action={<Button size="small" loading={paying} onClick={simulatePay}>Simulasi Bayar</Button>} />
+              ) : null}
+              <Space wrap>
+                <Button size="small" loading={busy} onClick={refreshStatus}>Periksa Status Bayar</Button>
+                <Button size="small" danger loading={busy} onClick={confirmCancel}>Batalkan Pesanan</Button>
+              </Space>
+            </Space>
           )}
 
           <Descriptions column={1} bordered size="small">
