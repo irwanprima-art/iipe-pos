@@ -636,7 +636,7 @@ func (s *Server) handleAdjustStock(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
-	orders, err := s.orders.List(r.Context(), r.URL.Query().Get("status"), queryInt(r, "event_id"))
+	orders, err := s.orders.List(r.Context(), r.URL.Query().Get("status"), queryInt(r, "event_id"), r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return

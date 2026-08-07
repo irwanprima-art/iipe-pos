@@ -627,7 +627,7 @@ func (o *Orders) GetByToken(ctx context.Context, token string) (domain.Order, er
 	return o.loadOrder(ctx, `(ord.qr_code=$1 OR ord.order_no=$1)`, token)
 }
 
-func (o *Orders) List(ctx context.Context, status string, eventID int64) ([]domain.Order, error) {
+func (o *Orders) List(ctx context.Context, status string, eventID int64, from, to string) ([]domain.Order, error) {
 	q := `SELECT id FROM orders WHERE 1=1`
 	var args []any
 	if status != "" {
@@ -637,6 +637,14 @@ func (o *Orders) List(ctx context.Context, status string, eventID int64) ([]doma
 	if eventID > 0 {
 		args = append(args, eventID)
 		q += fmt.Sprintf(" AND event_id=$%d", len(args))
+	}
+	if from != "" {
+		args = append(args, from)
+		q += fmt.Sprintf(" AND created_at::date >= $%d", len(args))
+	}
+	if to != "" {
+		args = append(args, to)
+		q += fmt.Sprintf(" AND created_at::date <= $%d", len(args))
 	}
 	q += ` ORDER BY id DESC LIMIT 300`
 	rows, err := o.pool.Query(ctx, q, args...)
