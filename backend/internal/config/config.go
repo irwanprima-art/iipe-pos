@@ -7,24 +7,24 @@ import (
 )
 
 type Config struct {
-	Port          string
-	DatabaseURL   string
-	JWTSecret     string
-	N8NWebhookURL string
-	AffiliateCode string
-	MidtransKey   string
-	MockPayments  bool
-	UploadDir     string
-	AppBaseURL    string // URL publik aplikasi, untuk redirect payment (mis. https://bazzar.souluze.com)
-	S3Endpoint    string
-	S3Bucket      string
-	S3AccessKey   string
-	S3SecretKey   string
-	S3PublicURL   string
-	S3Secure      bool
-	MaxImageDim   int
-	SumoAPIURL    string
-	SumoAPIKey    string
+	Port              string
+	DatabaseURL       string
+	JWTSecret         string
+	N8NWebhookURL     string
+	AffiliateCode     string
+	MidtransKey       string
+	MockPayments      bool
+	UploadDir         string
+	AppBaseURL        string // URL publik aplikasi, untuk redirect payment (mis. https://bazzar.souluze.com)
+	S3Endpoint        string
+	S3Bucket          string
+	S3AccessKey       string
+	S3SecretKey       string
+	S3PublicURL       string
+	S3Secure          bool
+	MaxImageDim       int
+	SumoAPIURL        string
+	SumoAPIKey        string
 	SumoWebhookSecret string
 	SumoWebhookToken  string
 	PaymentProvider   string
@@ -32,24 +32,24 @@ type Config struct {
 
 func Load() Config {
 	c := Config{
-		Port:          getenv("PORT", "8080"),
-		DatabaseURL:   getenv("DATABASE_URL", "postgres://iipe:iipe@localhost:5432/iipe?sslmode=disable"),
-		JWTSecret:     getenv("JWT_SECRET", "dev-secret-change-me"),
-		N8NWebhookURL: os.Getenv("N8N_WEBHOOK_URL"),
-		AffiliateCode: getenv("AFFILIATE_CODE", ""),
-		MidtransKey:   os.Getenv("MIDTRANS_SERVER_KEY"),
-		MockPayments:  getenv("MOCK_PAYMENTS", "true") == "true",
-		UploadDir:     getenv("UPLOAD_DIR", "/uploads"),
-		AppBaseURL:    strings.TrimSuffix(getenv("APP_BASE_URL", ""), "/"),
-		S3Endpoint:    os.Getenv("S3_ENDPOINT"),
-		S3Bucket:      os.Getenv("S3_BUCKET"),
-		S3AccessKey:   os.Getenv("S3_ACCESS_KEY"),
-		S3SecretKey:   os.Getenv("S3_SECRET_KEY"),
-		S3PublicURL:   os.Getenv("S3_PUBLIC_URL"),
-		S3Secure:      getenv("S3_SECURE", "true") == "true",
-		MaxImageDim:   getenvInt("MAX_IMAGE_DIM", 1200),
-		SumoAPIURL:    getenv("SUMO_API_URL", "https://api-pay-sandbox.sumopod.com"),
-		SumoAPIKey:    os.Getenv("SUMO_API_KEY"),
+		Port:              getenv("PORT", "8080"),
+		DatabaseURL:       getenv("DATABASE_URL", "postgres://iipe:iipe@localhost:5432/iipe?sslmode=disable"),
+		JWTSecret:         getenv("JWT_SECRET", "dev-secret-change-me"),
+		N8NWebhookURL:     os.Getenv("N8N_WEBHOOK_URL"),
+		AffiliateCode:     getenv("AFFILIATE_CODE", ""),
+		MidtransKey:       os.Getenv("MIDTRANS_SERVER_KEY"),
+		MockPayments:      getenv("MOCK_PAYMENTS", "true") == "true",
+		UploadDir:         getenv("UPLOAD_DIR", "/uploads"),
+		AppBaseURL:        strings.TrimSuffix(getenv("APP_BASE_URL", ""), "/"),
+		S3Endpoint:        os.Getenv("S3_ENDPOINT"),
+		S3Bucket:          os.Getenv("S3_BUCKET"),
+		S3AccessKey:       os.Getenv("S3_ACCESS_KEY"),
+		S3SecretKey:       os.Getenv("S3_SECRET_KEY"),
+		S3PublicURL:       os.Getenv("S3_PUBLIC_URL"),
+		S3Secure:          getenv("S3_SECURE", "true") == "true",
+		MaxImageDim:       getenvInt("MAX_IMAGE_DIM", 1200),
+		SumoAPIURL:        getenv("SUMO_API_URL", "https://api-pay-sandbox.sumopod.com"),
+		SumoAPIKey:        os.Getenv("SUMO_API_KEY"),
 		SumoWebhookSecret: os.Getenv("SUMO_WEBHOOK_SECRET"),
 		SumoWebhookToken:  os.Getenv("SUMO_WEBHOOK_TOKEN"),
 	}

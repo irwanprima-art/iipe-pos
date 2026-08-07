@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 
 	"iipe/backend/internal/domain"
@@ -342,6 +343,12 @@ func (s *Server) handleSumopayWebhook(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "bad request")
 		return
 	}
+	// log nama header untuk debugging format webhook SumoPay (nilai TIDAK di-log)
+	names := make([]string, 0, len(r.Header))
+	for k := range r.Header {
+		names = append(names, k)
+	}
+	log.Printf("sumopay webhook dari %s: headers=%v", r.RemoteAddr, names)
 	// verifikasi token webhook (opsional bila dikonfigurasi)
 	if s.cfg.SumoWebhookToken != "" && r.Header.Get("X-Webhook-Token") != s.cfg.SumoWebhookToken {
 		writeErr(w, 401, "invalid webhook token")
