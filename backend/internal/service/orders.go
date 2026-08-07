@@ -741,10 +741,10 @@ func (o *Orders) loadOrder(ctx context.Context, where string, args ...any) (doma
 	// riwayat status order (siapa & kapan setiap tahapan)
 	hrows, err := o.pool.Query(ctx, `SELECT status, COALESCE(actor,''), created_at FROM order_status_history WHERE order_id=$1 ORDER BY id`, ord.ID)
 	if err == nil {
-		defer throws.Close()
-		for throws.Next() {
+		defer hrows.Close()
+		for hrows.Next() {
 			var h domain.StatusHistory
-			if err := throws.Scan(&h.Status, &h.Actor, &h.CreatedAt); err == nil {
+			if err := hrows.Scan(&h.Status, &h.Actor, &h.CreatedAt); err == nil {
 				ord.History = append(ord.History, h)
 			}
 		}
