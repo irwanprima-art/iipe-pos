@@ -15,7 +15,7 @@ type Config struct {
 	MidtransKey       string
 	MockPayments      bool
 	UploadDir         string
-	AppBaseURL        string // URL publik aplikasi, untuk redirect payment (mis. https://bazzar.souluze.com)
+	AppBaseURL        string // URL publik aplikasi, untuk redirect payment (mis. https://bazaar.souluze.com)
 	S3Endpoint        string
 	S3Bucket          string
 	S3AccessKey       string
