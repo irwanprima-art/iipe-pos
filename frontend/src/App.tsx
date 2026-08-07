@@ -32,7 +32,7 @@ function TopBar() {
   const cartCount = useCartCount()
   return (
     <Header style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#001529' }}>
-      <Link to="/" style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>IIPE Bazaar</Link>
+      <Link to="/" style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>SuperBazaar</Link>
       <Space style={{ marginLeft: 'auto' }}>
         <Badge count={cartCount} size="small" offset={[-4, 4]}>
           <Button type="text" style={{ color: '#fff' }} icon={<ShoppingCartOutlined style={{ fontSize: 18 }} />} onClick={() => nav('/cart')} />
