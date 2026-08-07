@@ -31,7 +31,7 @@ export default function AdminEvents() {
   async function createEvent() {
     const v = await form.validateFields()
     try {
-      await api.post('/admin/events', { code: v.code, name: v.name, location: v.location, is_active: true })
+      await api.post('/admin/events', { code: v.code, name: v.name, location: v.location, is_active: true, lat: v.lat, lng: v.lng })
       message.success('Event dibuat')
       setOpen(false)
       load()
@@ -92,7 +92,11 @@ export default function AdminEvents() {
         <Form form={form} layout="vertical">
           <Form.Item name="code" label="Kode" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="name" label="Nama" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="location" label="Lokasi"><Input /></Form.Item>
+          <Form.Item name="location" label="Lokasi" extra="Isi latitude/longitude agar store otomatis buka event terdekat dari lokasi customer"><Input /></Form.Item>
+          <Space wrap>
+            <Form.Item name="lat" label="Latitude"><Input type="number" placeholder="mis. -6.200000" /></Form.Item>
+            <Form.Item name="lng" label="Longitude"><Input type="number" placeholder="mis. 106.816666" /></Form.Item>
+          </Space>
         </Form>
       </Modal>
 

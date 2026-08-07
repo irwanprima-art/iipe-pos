@@ -6,6 +6,14 @@ import { api, Event, EventProduct, fmtRp, loadCart, saveCart, Cart } from '../ap
 
 const imgFallback = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#f0f0f0"/><text x="100" y="105" font-size="14" fill="#aaa" text-anchor="middle">No Image</text></svg>')
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 export default function StoreHome() {
   const nav = useNavigate()
   const [events, setEvents] = useState<Event[]>([])
@@ -17,9 +25,45 @@ export default function StoreHome() {
   useEffect(() => {
     api.get<Event[]>('/store/events').then((evs) => {
       setEvents(evs)
-      if (evs.length) { setEventId(evs[0].id); }
+      if (evs.length) pickEvent(evs)
     }).catch(() => setLoading(false))
   }, [])
+
+  // Pilih event saat pertama buka: tampil instan (pilihan terakhir / event pertama),
+  // lalu coba lokasi terdekat via geolocation (async, tidak memblokir UI).
+  function pickEvent(evs: Event[]) {
+    const active = evs.filter((e) => e.is_active)
+    const pool = active.length ? active : evs
+    if (!pool.length) return
+    const saved = Number(localStorage.getItem('iipe_event_id'))
+    const savedEv = pool.find((e) => e.id === saved)
+    setEventId((savedEv || pool[0]).id)
+    if (!savedEv && pool.some((e) => e.lat != null && e.lng != null)) {
+      try {
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const nearest = nearestEvent(pool, pos.coords.latitude, pos.coords.longitude)
+              if (nearest) setEventId(nearest.id)
+            },
+            () => { /* izin ditolak → biarkan default */ },
+            { timeout: 4000, maximumAge: 600000 }
+          )
+        }
+      } catch (e) { /* geolocation tidak tersedia */ }
+    }
+  }
+
+  function nearestEvent(evs: Event[], lat: number, lng: number): Event | null {
+    let best: Event | null = null
+    let bestD = Infinity
+    for (const e of evs) {
+      if (e.lat == null || e.lng == null) continue
+      const d = haversineKm(lat, lng, e.lat, e.lng)
+      if (d < bestD) { bestD = d; best = e }
+    }
+    return best
+  }
 
   useEffect(() => {
     if (!eventId) return
@@ -60,7 +104,7 @@ export default function StoreHome() {
           style={{ width: 280 }}
           value={eventId || undefined}
           placeholder="Pilih event"
-          onChange={setEventId}
+          onChange={(id) => { setEventId(id); localStorage.setItem('iipe_event_id', String(id)) }}
           options={events.map((e) => ({ value: e.id, label: `${e.name} (${e.location || '-'})` }))}
         />
         <Input.Search placeholder="Cari produk / SKU" allowClear style={{ width: 260 }} onChange={(e) => setSearch(e.target.value)} />

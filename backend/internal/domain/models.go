@@ -34,11 +34,13 @@ type Component struct {
 }
 
 type Event struct {
-	ID       int64  `json:"id"`
-	Code     string `json:"code"`
-	Name     string `json:"name"`
-	Location string `json:"location"`
-	IsActive bool   `json:"is_active"`
+	ID       int64    `json:"id"`
+	Code     string   `json:"code"`
+	Name     string   `json:"name"`
+	Location string   `json:"location"`
+	IsActive bool     `json:"is_active"`
+	Lat      *float64 `json:"lat"`
+	Lng      *float64 `json:"lng"`
 }
 
 type EventProduct struct {

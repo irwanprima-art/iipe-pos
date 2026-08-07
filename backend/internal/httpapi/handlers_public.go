@@ -32,7 +32,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 // ---------- Storefront ----------
 
 func (s *Server) handleStoreEvents(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, location, is_active FROM events WHERE is_active ORDER BY id`)
+rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, location, is_active, lat, lng FROM events WHERE is_active ORDER BY id`)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -41,7 +41,7 @@ func (s *Server) handleStoreEvents(w http.ResponseWriter, r *http.Request) {
 	var out []domain.Event
 	for rows.Next() {
 		var e domain.Event
-		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive); err != nil {
+		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.Lat, &e.Lng); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}

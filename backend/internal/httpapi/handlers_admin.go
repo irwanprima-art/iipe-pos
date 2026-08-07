@@ -435,7 +435,7 @@ func (s *Server) handleCreateBundle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, COALESCE(location,''), is_active FROM events ORDER BY id DESC`)
+	rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, COALESCE(location,''), is_active, lat, lng FROM events ORDER BY id DESC`)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -444,7 +444,7 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	var out []domain.Event
 	for rows.Next() {
 		var e domain.Event
-		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive); err != nil {
+		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.Lat, &e.Lng); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}
@@ -455,10 +455,12 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Code     string `json:"code"`
-		Name     string `json:"name"`
-		Location string `json:"location"`
-		IsActive bool   `json:"is_active"`
+		Code     string   `json:"code"`
+		Name     string   `json:"name"`
+		Location string   `json:"location"`
+		IsActive bool     `json:"is_active"`
+		Lat      *float64 `json:"lat"`
+		Lng      *float64 `json:"lng"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
@@ -469,8 +471,8 @@ func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var e domain.Event
-	if err := s.pool.QueryRow(r.Context(), `INSERT INTO events (code, name, location, is_active) VALUES ($1,$2,$3,$4) RETURNING id, code, name, location, is_active`,
-		body.Code, body.Name, body.Location, body.IsActive).Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive); err != nil {
+	if err := s.pool.QueryRow(r.Context(), `INSERT INTO events (code, name, location, is_active, lat, lng) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, code, name, location, is_active, lat, lng`,
+		body.Code, body.Name, body.Location, body.IsActive, body.Lat, body.Lng).Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.Lat, &e.Lng); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
@@ -484,9 +486,11 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Name     *string `json:"name"`
-		Location *string `json:"location"`
-		IsActive *bool   `json:"is_active"`
+		Name     *string   `json:"name"`
+		Location *string   `json:"location"`
+		IsActive *bool     `json:"is_active"`
+		Lat      *float64  `json:"lat"`
+		Lng      *float64  `json:"lng"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
@@ -501,8 +505,14 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 	if body.IsActive != nil {
 		_, _ = s.pool.Exec(r.Context(), `UPDATE events SET is_active=$1 WHERE id=$2`, *body.IsActive, id)
 	}
+	if body.Lat != nil {
+		_, _ = s.pool.Exec(r.Context(), `UPDATE events SET lat=$1 WHERE id=$2`, *body.Lat, id)
+	}
+	if body.Lng != nil {
+		_, _ = s.pool.Exec(r.Context(), `UPDATE events SET lng=$1 WHERE id=$2`, *body.Lng, id)
+	}
 	var e domain.Event
-	if err := s.pool.QueryRow(r.Context(), `SELECT id, code, name, COALESCE(location,''), is_active FROM events WHERE id=$1`, id).Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive); err != nil {
+	if err := s.pool.QueryRow(r.Context(), `SELECT id, code, name, COALESCE(location,''), is_active, lat, lng FROM events WHERE id=$1`, id).Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.Lat, &e.Lng); err != nil {
 		writeErr(w, 404, "event tidak ditemukan")
 		return
 	}

@@ -1,7 +1,7 @@
 const base = '/api/v1'
 
 // ---------- types ----------
-export interface Event { id: number; code: string; name: string; location: string; is_active: boolean }
+export interface Event { id: number; code: string; name: string; location: string; is_active: boolean; lat?: number; lng?: number }
 export interface Component { product_id: number; sku: string; name: string; qty: number }
 export interface Product {
   id: number; sku: string; name: string; category: string; description: string
