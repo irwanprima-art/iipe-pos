@@ -301,8 +301,8 @@ func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, 
 	if _, err := tx.Exec(ctx, `UPDATE stock_movements SET ref_id=$1 WHERE ref_type='order' AND ref_id=0`, orderID); err != nil {
 		return domain.Order{}, err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO payments (order_id, method, amount, status, provider_ref) VALUES ($1,$2,$3,'paid',$4)`,
-		orderID, method, total, "POS-"+tokenStr(4)); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO payments (order_id, method, amount, status, provider_ref, ref_no) VALUES ($1,$2,$3,'paid',$4,$5)`,
+		orderID, method, total, "POS-"+tokenStr(4), orderNo); err != nil {
 		return domain.Order{}, err
 	}
 	if err := setOrderStatusTx(ctx, tx, orderID, "paid", "pos"); err != nil {
@@ -652,8 +652,8 @@ func (o *Orders) loadOrder(ctx context.Context, where string, args ...any) (doma
 	}
 
 	var pay domain.Payment
-	err = o.pool.QueryRow(ctx, `SELECT id, order_id, method, amount, status, provider_ref FROM payments WHERE order_id=$1 ORDER BY id DESC LIMIT 1`, ord.ID).
-		Scan(&pay.ID, &pay.OrderID, &pay.Method, &pay.Amount, &pay.Status, &pay.ProviderRef)
+	err = o.pool.QueryRow(ctx, `SELECT id, order_id, method, amount, status, provider_ref, COALESCE(ref_no,'') FROM payments WHERE order_id=$1 ORDER BY id DESC LIMIT 1`, ord.ID).
+		Scan(&pay.ID, &pay.OrderID, &pay.Method, &pay.Amount, &pay.Status, &pay.ProviderRef, &pay.RefNo)
 	if err == nil {
 		ord.Payment = &pay
 	}

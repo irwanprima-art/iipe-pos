@@ -92,6 +92,7 @@ type Payment struct {
 	Amount         int        `json:"amount"`
 	Status         string     `json:"status"`
 	ProviderRef    string     `json:"provider_ref"`
+	RefNo          string     `json:"ref_no"` // nomor order untuk rekonsiliasi
 	PaymentLinkURL string     `json:"payment_link_url"`
 	ExpiresAt      *time.Time `json:"expires_at"`
 }

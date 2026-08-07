@@ -60,6 +60,7 @@ export default function AdminOrders() {
               <Descriptions.Item label="Event">{detail.event_name}</Descriptions.Item>
               <Descriptions.Item label="Total">{fmtRp(detail.total)}</Descriptions.Item>
               <Descriptions.Item label="Metode">{detail.payment_method || '-'}</Descriptions.Item>
+              <Descriptions.Item label="No. Referensi">{detail.payment?.ref_no || detail.provider_ref || '-'}</Descriptions.Item>
               {detail.pickup_no != null && <Descriptions.Item label="Nomor Ambil">#{String(detail.pickup_no).padStart(3, '0')}</Descriptions.Item>}
             </Descriptions>
             <Table

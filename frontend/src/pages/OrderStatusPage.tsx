@@ -147,6 +147,7 @@ export default function OrderStatusPage() {
             <Descriptions.Item label="WhatsApp">{order.customer_phone}</Descriptions.Item>
             <Descriptions.Item label="Event">{order.event_name}</Descriptions.Item>
             <Descriptions.Item label="Total">{fmtRp(order.total)}</Descriptions.Item>
+            <Descriptions.Item label="No. Referensi">{order.payment?.ref_no || order.payment?.provider_ref || '-'}</Descriptions.Item>
             {order.pickup_no != null && <Descriptions.Item label="Nomor Ambil">#{String(order.pickup_no).padStart(3, '0')}</Descriptions.Item>}
           </Descriptions>
 

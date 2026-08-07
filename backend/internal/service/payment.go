@@ -52,10 +52,11 @@ func (p *Payments) CreateQRIS(ctx context.Context, orderID int64, amount int, re
 	}
 	var id int64
 	err := p.pool.QueryRow(ctx, `
-		INSERT INTO payments (order_id, method, amount, status, provider_ref, payment_link_url)
-		VALUES ($1,$2,$3,$4,$5,'') RETURNING id`,
-		pay.OrderID, pay.Method, pay.Amount, pay.Status, pay.ProviderRef).Scan(&id)
+		INSERT INTO payments (order_id, method, amount, status, provider_ref, ref_no)
+		VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+		pay.OrderID, pay.Method, pay.Amount, pay.Status, pay.ProviderRef, ref).Scan(&id)
 	pay.ID = id
+	pay.RefNo = ref
 	return pay, err
 }
 
@@ -124,10 +125,11 @@ func (p *Payments) createSumopay(ctx context.Context, orderID int64, amount int,
 	}
 	var id int64
 	err = p.pool.QueryRow(ctx, `
-		INSERT INTO payments (order_id, method, amount, status, provider_ref, payment_link_url)
-		VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-		pay.OrderID, pay.Method, pay.Amount, pay.Status, pay.ProviderRef, pay.PaymentLinkURL).Scan(&id)
+		INSERT INTO payments (order_id, method, amount, status, provider_ref, payment_link_url, ref_no)
+		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+		pay.OrderID, pay.Method, pay.Amount, pay.Status, pay.ProviderRef, pay.PaymentLinkURL, ref).Scan(&id)
 	pay.ID = id
+	pay.RefNo = ref
 	return pay, err
 }
 
