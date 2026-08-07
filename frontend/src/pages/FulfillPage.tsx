@@ -1,7 +1,32 @@
 import { useEffect, useState } from 'react'
-import { Card, Tabs, List, Button, Tag, Space, Input, message, Descriptions, Alert, Typography, Select } from 'antd'
+import { Card, Tabs, List, Button, Tag, Space, Input, message, Descriptions, Alert, Typography, Select, DatePicker } from 'antd'
 import { ScanOutlined } from '@ant-design/icons'
 import { api, Order, Event, PosProduct, fmtRp, STATUS_LABEL } from '../api'
+
+// Label tahapan untuk timeline
+const HIST_LABEL: Record<string, string> = {
+  pending_payment: 'Checkout', paid: 'Bayar', picking: 'Pick (mulai)', picked: 'Pick (selesai)',
+  packing: 'Pack (mulai)', packed: 'Pack', ready: 'Ready', handed_over: 'Handover', completed: 'Selesai',
+}
+
+function fmtTime(t: string) {
+  return new Date(t).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+// Timeline tahapan order: status + waktu + siapa
+function HistoryTimeline({ o }: { o: Order }) {
+  const h = (o.history || []).filter((x) => HIST_LABEL[x.status])
+  if (h.length === 0) return <span style={{ color: '#888' }}>-</span>
+  return (
+    <Space direction="vertical" size={2}>
+      {h.map((x, i) => (
+        <div key={i} style={{ fontSize: 12 }}>
+          <b>{HIST_LABEL[x.status]}</b> · {fmtTime(x.created_at)} · <span style={{ color: '#555' }}>{x.actor || '-'}</span>
+        </div>
+      ))}
+    </Space>
+  )
+}
 
 export default function FulfillPage() {
   const [events, setEvents] = useState<Event[]>([])
@@ -11,6 +36,19 @@ export default function FulfillPage() {
   const [loading, setLoading] = useState(false)
   const [scanToken, setScanToken] = useState('')
   const [scanned, setScanned] = useState<Order | null>(null)
+  const [doneRows, setDoneRows] = useState<Order[]>([])
+  const [doneFrom, setDoneFrom] = useState('')
+  const [doneTo, setDoneTo] = useState('')
+  const [doneLoading, setDoneLoading] = useState(false)
+
+  // Order selesai (completed) dengan filter tanggal
+  function loadDone() {
+    setDoneLoading(true)
+    api.get<Order[]>(`/fulfillment/orders?event_id=${eventId || ''}&status=completed&from=${doneFrom}&to=${doneTo}`)
+      .then((res) => setDoneRows(Array.isArray(res) ? res : []))
+      .catch((e) => message.error(e.message)).finally(() => setDoneLoading(false))
+  }
+  useEffect(loadDone, [eventId, doneFrom, doneTo])
 
   function load() {
     setLoading(true)
@@ -160,6 +198,35 @@ export default function FulfillPage() {
             children: filter(['packed']).map((o) => orderCard(o, (
               <Button type="primary" size="large" onClick={() => act(`/orders/${o.id}/ready`, 'Ready — notifikasi WA terkirim')}>Tandai Ready</Button>
             ))),
+          },
+          {
+            key: 'done', label: `Selesai (${doneRows.length})`,
+            children: (
+              <>
+                <Space style={{ marginBottom: 12 }} wrap>
+                  <DatePicker.RangePicker
+                    size="small"
+                    onChange={(d) => {
+                      setDoneFrom(d && d[0] ? d[0].format('YYYY-MM-DD') : '')
+                      setDoneTo(d && d[1] ? d[1].format('YYYY-MM-DD') : '')
+                    }}
+                  />
+                  <Button size="small" onClick={loadDone}>Refresh</Button>
+                </Space>
+                <Table
+                  rowKey="id" size="small" loading={doneLoading}
+                  dataSource={doneRows}
+                  pagination={{ pageSize: 20, showSizeChanger: false }}
+                  columns={[
+                    { title: 'No. Order', dataIndex: 'order_no', width: 190 },
+                    { title: 'Customer', dataIndex: 'customer_name', ellipsis: true },
+                    { title: 'Total', dataIndex: 'total', render: (v: number) => fmtRp(v) },
+                    { title: 'No. Ambil', dataIndex: 'pickup_no', width: 90, render: (v?: number) => (v != null ? `#${String(v).padStart(3, '0')}` : '-') },
+                    { title: 'Timeline (status · waktu · operator)', render: (_: any, o: Order) => <HistoryTimeline o={o} /> },
+                  ]}
+                />
+              </>
+            ),
           },
           {
             key: 'handover', label: `Handover (${filter(['ready']).length})`,

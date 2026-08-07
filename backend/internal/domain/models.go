@@ -86,6 +86,13 @@ type OrderItem struct {
 	PickedQty int    `json:"picked_qty"` // jumlah yang sudah di-pick (dari ledger PICK)
 }
 
+// StatusHistory adalah satu catatan transisi status order (siapa & kapan).
+type StatusHistory struct {
+	Status    string    `json:"status"`
+	Actor     string    `json:"actor"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Payment struct {
 	ID             int64      `json:"id"`
 	OrderID        int64      `json:"order_id"`
@@ -116,6 +123,7 @@ type Order struct {
 	CreatedAt     time.Time   `json:"created_at"`
 	Items         []OrderItem `json:"items"`
 	Payment       *Payment    `json:"payment,omitempty"`
+	History       []StatusHistory `json:"history"`
 }
 
 type Dashboard struct {

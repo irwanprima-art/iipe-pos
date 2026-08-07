@@ -83,13 +83,18 @@ func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleFulfillmentOrders(w http.ResponseWriter, r *http.Request) {
-	orders, err := s.orders.List(r.Context(), "", queryInt(r, "event_id"), "", "")
+	status := r.URL.Query().Get("status")
+	orders, err := s.orders.List(r.Context(), status, queryInt(r, "event_id"), r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
 	}
 	out := []any{}
 	for _, o := range orders {
+		if status != "" {
+			out = append(out, o)
+			continue
+		}
 		switch o.Status {
 		case "paid", "picking", "picked", "packing", "packed", "ready":
 			out = append(out, o)

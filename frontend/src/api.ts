@@ -30,11 +30,12 @@ export interface StockMovement {
 }
 export interface OrderItem { id: number; item_type: string; parent_id?: number; product_id: number; sku: string; name: string; qty: number; price: number; state: string }
 export interface Payment { id: number; order_id: number; method: string; amount: number; status: string; provider_ref: string; ref_no?: string; payment_link_url?: string; expires_at?: string }
+export interface StatusHistory { status: string; actor: string; created_at: string }
 export interface Order {
   id: number; order_no: string; event_id: number; event_name: string; channel: string; status: string
   customer_name: string; customer_phone: string; total: number; qr_code: string; pickup_no?: number
   payment_method: string; provider_ref: string; reserved_until?: string; created_at: string
-  items: OrderItem[]; payment?: Payment
+  items: OrderItem[]; payment?: Payment; history?: StatusHistory[]
 }
 export interface PosProduct {
   product_id: number; sku: string; name: string; barcode_pcs: string; barcode_carton: string
