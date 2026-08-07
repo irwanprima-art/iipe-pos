@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Button, Input, Space, Typography, message, Alert, Tag } from 'antd'
+import { Card, Table, Button, Input, Space, Typography, message, Alert, Tag, Empty } from 'antd'
 import { Link } from 'react-router-dom'
-import { api, apiCust, Order, STATUS_LABEL, fmtRp, customerToken, setCustomerToken, isValidWaPhone, normalizePhone } from '../api'
+import { api, apiCust, Order, STATUS_LABEL, fmtRp, customerToken, setCustomerToken, clearCustomerToken, isValidWaPhone, normalizePhone } from '../api'
 
 // Halaman customer: login via WA+OTP lalu melihat daftar pesanan sendiri.
 export default function MyOrders() {
@@ -12,10 +12,12 @@ export default function MyOrders() {
   const [devOtp, setDevOtp] = useState('')
   const [step, setStep] = useState<'phone' | 'otp'>('phone')
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
   function load() {
-    if (!tok) { setOrders([]); return }
-    apiCust.get<Order[]>('/customer/orders').then(setOrders).catch((e) => message.error(e.message))
+    if (!tok) { setOrders([]); setLoadError(''); return }
+    setLoading(true); setLoadError('')
+    apiCust.get<Order[]>('/customer/orders').then(setOrders).catch((e) => setLoadError(e.message)).finally(() => setLoading(false))
   }
   useEffect(load, [tok])
 
@@ -68,23 +70,33 @@ export default function MyOrders() {
             </Space>
           )
         ) : (
-          orders.length === 0 ? (
-            <Typography.Paragraph type="secondary">Belum ada pesanan.</Typography.Paragraph>
-          ) : (
-            <Table
-              rowKey="id"
-              dataSource={orders}
-              pagination={false}
-              columns={[
-                { title: 'No. Order', dataIndex: 'order_no' },
-                { title: 'Tanggal', dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString('id-ID') },
-                { title: 'Total', dataIndex: 'total', render: (v: number) => fmtRp(v) },
-                { title: 'Status', dataIndex: 'status', render: (s: string) => <Tag color={s === 'completed' ? 'green' : s === 'cancelled' ? 'red' : 'blue'}>{STATUS_LABEL[s] || s}</Tag> },
-                { title: 'Nomor Ambil', dataIndex: 'pickup_no', render: (v?: number) => v ? `#${String(v).padStart(3, '0')}` : '-' },
-                { title: '', render: (_: any, o: Order) => <Link to={`/status/${o.qr_code}`}>Lihat</Link> },
-              ]}
-            />
-          )
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <Typography.Text type="secondary">Login sebagai customer via WhatsApp</Typography.Text>
+              <Button size="small" onClick={() => { clearCustomerToken(); setTok(''); setOrders([]); setLoadError('') }}>Keluar</Button>
+            </div>
+            {loadError && <Alert type="error" showIcon message="Gagal memuat pesanan" description={loadError} />}
+            {orders.length === 0 && !loading ? (
+              <Empty description="Belum ada pesanan" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+                <Link to="/"><Button type="primary">Mulai Belanja</Button></Link>
+              </Empty>
+            ) : (
+              <Table
+                rowKey="id"
+                loading={loading}
+                dataSource={orders}
+                pagination={false}
+                columns={[
+                  { title: 'No. Order', dataIndex: 'order_no' },
+                  { title: 'Tanggal', dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString('id-ID') },
+                  { title: 'Total', dataIndex: 'total', render: (v: number) => fmtRp(v) },
+                  { title: 'Status', dataIndex: 'status', render: (s: string) => <Tag color={s === 'completed' ? 'green' : s === 'cancelled' ? 'red' : 'blue'}>{STATUS_LABEL[s] || s}</Tag> },
+                  { title: 'Nomor Ambil', dataIndex: 'pickup_no', render: (v?: number) => v ? `#${String(v).padStart(3, '0')}` : '-' },
+                  { title: '', render: (_: any, o: Order) => <Link to={`/status/${o.qr_code}`}>Lihat</Link> },
+                ]}
+              />
+            )}
+          </Space>
         )}
       </Card>
     </div>

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Select, Button, Modal, Input, Space, message, Tag, Drawer } from 'antd'
-import { api, num, EventProduct, Event, StockMovement } from '../api'
+import { api, num, currentUser, EventProduct, Event, StockMovement } from '../api'
+
+// Hanya admin yang boleh mengubah stok (terima barang / sesuaikan); staff lain hanya lihat + log.
+const isAdmin = currentUser()?.role === 'admin'
 
 const TYPE_META: Record<string, { label: string; color: string }> = {
   IN: { label: 'Terima Barang', color: 'green' },
@@ -99,8 +102,12 @@ export default function AdminStock() {
           {
             title: 'Aksi', render: (_: any, r: EventProduct) => (
               <Space wrap>
-                <Button size="small" type="primary" disabled={r.product?.is_bundle} onClick={() => { setInboundTarget(r); setInQty(0); setInReason('') }}>Terima Barang</Button>
-                <Button size="small" disabled={r.product?.is_bundle} onClick={() => { setEditing(r); setNewTotal(r.stock_total); setReason('') }}>Sesuaikan</Button>
+                {isAdmin && (
+                  <>
+                    <Button size="small" type="primary" disabled={r.product?.is_bundle} onClick={() => { setInboundTarget(r); setInQty(0); setInReason('') }}>Terima Barang</Button>
+                    <Button size="small" disabled={r.product?.is_bundle} onClick={() => { setEditing(r); setNewTotal(r.stock_total); setReason('') }}>Sesuaikan</Button>
+                  </>
+                )}
                 <Button size="small" onClick={() => { setLogProduct(r); setLogOpen(true); loadLog(r) }}>Log</Button>
               </Space>
             ),
@@ -149,7 +156,9 @@ export default function AdminStock() {
             { title: 'Produk', dataIndex: 'product', ellipsis: true },
             { title: 'Tipe', dataIndex: 'type', width: 140, render: (t: string) => <Tag color={TYPE_META[t]?.color || 'default'}>{TYPE_META[t]?.label || t}</Tag> },
             { title: 'Qty', dataIndex: 'qty', width: 80, render: (_: number, m: StockMovement) => <b>{fmtQty(m)}</b> },
-            { title: 'Alasan / Ref', dataIndex: 'reason', ellipsis: true, render: (_: string, m: StockMovement) => m.reason || (m.ref_type ? `${m.ref_type} #${m.ref_id || 0}` : '-') },
+            { title: 'Oleh', dataIndex: 'actor', width: 160, ellipsis: true, render: (v: string) => v || '-' },
+            { title: 'No. Order', dataIndex: 'ref_no', width: 130, render: (v: string) => v || '-' },
+            { title: 'Alasan', dataIndex: 'reason', ellipsis: true, render: (_: string, m: StockMovement) => m.reason || (m.ref_type ? `${m.ref_type} #${m.ref_id || 0}` : '-') },
           ]}
         />
       </Drawer>
