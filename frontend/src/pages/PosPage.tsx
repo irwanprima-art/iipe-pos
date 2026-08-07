@@ -4,6 +4,8 @@ import { ScanOutlined, DeleteOutlined } from '@ant-design/icons'
 import { QRCodeSVG } from 'qrcode.react'
 import { api, PosProduct, Event, Order, fmtRp } from '../api'
 
+const imgFallback = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#f0f0f0"/><text x="60" y="66" font-size="12" fill="#aaa" text-anchor="middle">No Image</text></svg>')
+
 interface Line { product_id: number; name: string; sku: string; price: number; qty: number; item_type: string; available: number }
 
 export default function PosPage() {
@@ -93,21 +95,29 @@ export default function PosPage() {
               />
               <Input.Search placeholder="Cari nama / SKU" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 220 }} />
             </Space>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
               {filtered.map((p) => (
-                <Button
+                <button
                   key={p.product_id}
-                  size="large"
+                  type="button"
                   disabled={p.available < 1}
                   onClick={() => addProduct(p, 1)}
-                  style={{ height: 'auto', padding: '10px 8px', whiteSpace: 'normal' }}
+                  style={{
+                    border: '1px solid #d9d9d9', borderRadius: 8, background: '#fff', cursor: 'pointer',
+                    padding: 0, overflow: 'hidden', textAlign: 'left', display: 'flex', flexDirection: 'column',
+                    minHeight: 158, opacity: p.available < 1 ? 0.45 : 1, boxShadow: '0 1px 2px rgba(0,0,0,.04)',
+                  }}
                 >
-                  <div style={{ fontWeight: 600 }}>{p.name}</div>
-                  <div style={{ fontSize: 12, color: p.available > 0 ? '#52c41a' : '#ff4d4f' }}>
-                    {fmtRp(p.price)} · stok {p.available}
+                  <div style={{ height: 84, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={p.images?.[0] || imgFallback} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
-                  {p.is_bundle && <div style={{ fontSize: 11 }}><Tag color="gold">Bundle</Tag></div>}
-                </Button>
+                  <div style={{ padding: '6px 8px', flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
+                    <div style={{ fontSize: 12, marginTop: 2 }}>{fmtRp(p.price)}</div>
+                    <div style={{ fontSize: 11, color: p.available > 0 ? '#52c41a' : '#ff4d4f' }}>stok {p.available}</div>
+                    {p.is_bundle && <div style={{ marginTop: 2 }}><Tag color="gold" style={{ fontSize: 10, lineHeight: '16px', margin: 0 }}>Bundle</Tag></div>}
+                  </div>
+                </button>
               ))}
             </div>
           </Card>
