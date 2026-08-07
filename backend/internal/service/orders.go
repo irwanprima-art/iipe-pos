@@ -373,8 +373,70 @@ func (o *Orders) PickAll(ctx context.Context, orderID int64, actor string) error
 	return tx.Commit(ctx)
 }
 
-// Pack menandai order packed dan memberi nomor pickup berurutan per event.
-func (o *Orders) Pack(ctx context.Context, orderID int64, actor string) (int, error) {
+// PickItem mem-pick sebagian produk dari order berdasarkan scan barcode
+// (pcs = 1, carton = qty_per_carton). Memverifikasi item ada & tidak melebihi qty order.
+func (o *Orders) PickItem(ctx context.Context, orderID, productID, qty int64, actor string) error {
+	if qty <= 0 {
+		return fmt.Errorf("qty harus lebih dari 0")
+	}
+	tx, err := o.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var status string
+	var eventID int64
+	if err := tx.QueryRow(ctx, `SELECT status, event_id FROM orders WHERE id=$1 FOR UPDATE`, orderID).Scan(&status, &eventID); err != nil {
+		return err
+	}
+	if status != "paid" && status != "picking" && status != "picked" {
+		return fmt.Errorf("order status %s tidak bisa di-pick", status)
+	}
+	var itemQty int
+	if err := tx.QueryRow(ctx, `
+		SELECT qty FROM order_items
+		WHERE order_id=$1 AND product_id=$2 AND item_type IN ('product','component') AND state != 'cancelled'`,
+		orderID, productID).Scan(&itemQty); err != nil {
+		return fmt.Errorf("produk tidak ada di order ini")
+	}
+	var picked int
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(SUM(qty),0) FROM stock_movements
+		WHERE ref_type='order' AND ref_id=$1 AND product_id=$2 AND type='PICK'`,
+		orderID, productID).Scan(&picked); err != nil {
+		return err
+	}
+	if qty > int64(itemQty-picked) {
+		return fmt.Errorf("scan berlebih: butuh %d, sudah di-pick %d", itemQty, picked)
+	}
+	if err := insertMovement(ctx, tx, eventID, productID, qty, "PICK", "order", orderID, "pick barcode", actor); err != nil {
+		return err
+	}
+	if picked+int(qty) >= itemQty {
+		if _, err := tx.Exec(ctx, `UPDATE order_items SET state='picked'
+			WHERE order_id=$1 AND product_id=$2 AND item_type IN ('product','component') AND state != 'cancelled'`,
+			orderID, productID); err != nil {
+			return err
+		}
+	}
+	// status order: picking saat masih ada sisa, picked saat semua item selesai
+	var remaining int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM order_items
+		WHERE order_id=$1 AND item_type IN ('product','component') AND state='allocated'`, orderID).Scan(&remaining); err != nil {
+		return err
+	}
+	if remaining == 0 {
+		if err := setOrderStatusTx(ctx, tx, orderID, "picked", actor); err != nil {
+			return err
+		}
+	} else if status == "paid" {
+		if err := setOrderStatusTx(ctx, tx, orderID, "picking", actor); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
 	tx, err := o.pool.Begin(ctx)
 	if err != nil {
 		return 0, err
@@ -629,7 +691,10 @@ func (o *Orders) loadOrder(ctx context.Context, where string, args ...any) (doma
 	}
 
 	rows, err := o.pool.Query(ctx, `
-		SELECT oi.id, oi.item_type, oi.parent_id, pr.sku, pr.name, oi.qty, oi.price, oi.state
+		SELECT oi.id, oi.item_type, oi.parent_id, pr.sku, pr.name, oi.qty, oi.price, oi.state,
+		       COALESCE((SELECT SUM(sm.qty) FROM stock_movements sm
+		                 WHERE sm.ref_type='order' AND sm.ref_id=oi.order_id
+		                   AND sm.product_id=oi.product_id AND sm.type='PICK'),0)
 		FROM order_items oi JOIN products pr ON pr.id = oi.product_id
 		WHERE oi.order_id=$1 ORDER BY oi.id`, ord.ID)
 	if err != nil {
@@ -639,7 +704,7 @@ func (o *Orders) loadOrder(ctx context.Context, where string, args ...any) (doma
 	for rows.Next() {
 		var it domain.OrderItem
 		var pid sql.NullInt64
-		if err := rows.Scan(&it.ID, &it.ItemType, &pid, &it.SKU, &it.Name, &it.Qty, &it.Price, &it.State); err != nil {
+		if err := rows.Scan(&it.ID, &it.ItemType, &pid, &it.SKU, &it.Name, &it.Qty, &it.Price, &it.State, &it.PickedQty); err != nil {
 			return ord, err
 		}
 		if pid.Valid {

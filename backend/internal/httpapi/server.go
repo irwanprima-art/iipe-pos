@@ -126,6 +126,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/pos/checkout", s.requireAuth(s.handlePosCheckout, staffRoles...))
 	mux.HandleFunc("GET /api/v1/fulfillment/orders", s.requireAuth(s.handleFulfillmentOrders, staffRoles...))
 	mux.HandleFunc("POST /api/v1/orders/{id}/pick", s.requireAuth(s.handlePick, staffRoles...))
+	mux.HandleFunc("POST /api/v1/orders/{id}/pick-item", s.requireAuth(s.handlePickItem, staffRoles...))
 	mux.HandleFunc("POST /api/v1/orders/{id}/pack", s.requireAuth(s.handlePack, staffRoles...))
 	mux.HandleFunc("POST /api/v1/orders/{id}/ready", s.requireAuth(s.handleReady, staffRoles...))
 	mux.HandleFunc("POST /api/v1/orders/scan", s.requireAuth(s.handleScan, staffRoles...))

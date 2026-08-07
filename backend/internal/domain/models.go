@@ -83,6 +83,7 @@ type OrderItem struct {
 	Qty       int    `json:"qty"`
 	Price     int    `json:"price"`
 	State     string `json:"state"`
+	PickedQty int    `json:"picked_qty"` // jumlah yang sudah di-pick (dari ledger PICK)
 }
 
 type Payment struct {
