@@ -188,12 +188,16 @@ func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, 
 }
 
 // PosCheckout membuat order POS yang langsung selesai (handed over) dengan stock PICK langsung.
-func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, items []CartItem, customerName, actor string) (domain.Order, error) {
+// edcRef: nomor referensi struk EDC (wajib untuk metode edc).
+func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, items []CartItem, customerName, actor, edcRef string) (domain.Order, error) {
 	if len(items) == 0 {
 		return domain.Order{}, errors.New("keranjang kosong")
 	}
 	if customerName == "" {
 		customerName = "Kasir POS"
+	}
+	if edcRef == "" {
+		edcRef = "POS-" + tokenStr(4)
 	}
 	tx, err := o.pool.Begin(ctx)
 	if err != nil {
@@ -302,7 +306,7 @@ func (o *Orders) PosCheckout(ctx context.Context, eventID int64, method string, 
 		return domain.Order{}, err
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO payments (order_id, method, amount, status, provider_ref, ref_no) VALUES ($1,$2,$3,'paid',$4,$5)`,
-		orderID, method, total, "POS-"+tokenStr(4), orderNo); err != nil {
+		orderID, method, total, edcRef, orderNo); err != nil {
 		return domain.Order{}, err
 	}
 	if err := setOrderStatusTx(ctx, tx, orderID, "paid", "pos"); err != nil {

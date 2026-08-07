@@ -1,0 +1,19 @@
+/* Print: hanya struk (.receipt-area) yang dicetak, sisanya disembunyikan */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-area,
+  .receipt-area * {
+    visibility: visible;
+  }
+  .receipt-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

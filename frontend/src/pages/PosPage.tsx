@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Card, Table, Button, Input, Select, Space, Tag, Modal, message, Statistic, Row, Col, Alert, Typography } from 'antd'
-import { ScanOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Input, Space, Tag, Modal, message, Statistic, Row, Col, Alert, Typography } from 'antd'
+import { ScanOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
 import { QRCodeSVG } from 'qrcode.react'
 import { api, PosProduct, Event, Order, fmtRp } from '../api'
 
@@ -8,18 +8,54 @@ const imgFallback = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns=
 
 interface Line { product_id: number; name: string; sku: string; price: number; qty: number; item_type: string; available: number }
 
+// Struk EDC: list barang, nama event, dan QR untuk ambil barang
+function Receipt({ order }: { order: Order }) {
+  const items = order.items.filter((i) => i.item_type !== 'component')
+  return (
+    <div className="receipt-area" style={{ fontFamily: '"Courier New", monospace', fontSize: 13, lineHeight: 1.5 }}>
+      <div style={{ textAlign: 'center' }}>
+        <b style={{ fontSize: 16 }}>SUPERBAZAAR</b><br />
+        {order.event_name}<br />
+        <span style={{ fontSize: 11 }}>POS — Struk Penjualan</span>
+      </div>
+      <div style={{ borderTop: '1px dashed #000', margin: '6px 0', paddingTop: 6 }}>
+        Order: {order.order_no}<br />
+        Tanggal: {new Date(order.created_at).toLocaleString('id-ID')}<br />
+        Metode: <b>EDC</b> · No. Reff: {order.provider_ref || order.payment?.provider_ref || '-'}
+      </div>
+      <div style={{ borderTop: '1px dashed #000', margin: '6px 0', paddingTop: 6 }}>
+        {items.map((i) => (
+          <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ flex: 1 }}>{i.name} ×{i.qty}</span>
+            <span>{fmtRp(i.price * i.qty)}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ borderTop: '1px dashed #000', margin: '6px 0', paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
+        <b>Total</b>
+        <b>{fmtRp(order.total)}</b>
+      </div>
+      <div style={{ textAlign: 'center', marginTop: 8 }}>
+        <QRCodeSVG value={order.qr_code} size={140} style={{ margin: '0 auto' }} />
+        <div style={{ fontSize: 11 }}>Tunjukkan QR ini saat mengambil barang</div>
+        <div style={{ fontSize: 11, marginTop: 4 }}>Terima kasih telah berbelanja! 🛍️</div>
+      </div>
+    </div>
+  )
+}
+
 export default function PosPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [eventId, setEventId] = useState(0)
   const [products, setProducts] = useState<PosProduct[]>([])
   const [lines, setLines] = useState<Line[]>([])
   const [scan, setScan] = useState('')
-  const [method, setMethod] = useState('qris')
   const [paying, setPaying] = useState(false)
-  const [payModal, setPayModal] = useState(false)
   const [lastOrder, setLastOrder] = useState<Order | null>(null)
+  const [receiptOpen, setReceiptOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [custName, setCustName] = useState('')
+  const [edcRef, setEdcRef] = useState('')
 
   useEffect(() => { api.get<Event[]>('/store/events').then((e) => { setEvents(e); if (e.length) setEventId(e[0].id) }) }, [])
   useEffect(() => {
@@ -59,21 +95,23 @@ export default function PosPage() {
 
   function startPay() {
     if (lines.length === 0) { message.warning('Keranjang kosong'); return }
-    if (method === 'qris') setPayModal(true)
-    else doCheckout()
+    if (!edcRef.trim()) { message.warning('Nomor reff EDC wajib diisi (dari struk mesin EDC)'); return }
+    doCheckout()
   }
 
   async function doCheckout() {
     setPaying(true)
     try {
       const order = await api.post<Order>('/pos/checkout', {
-        event_id: eventId, method,
+        event_id: eventId, method: 'edc',
         customer_name: custName.trim(),
+        provider_ref: edcRef.trim(),
         items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty, item_type: l.item_type })),
       })
       setLastOrder(order)
       setLines([])
-      setPayModal(false)
+      setEdcRef('')
+      setReceiptOpen(true)
       message.success(`Transaksi selesai: ${order.order_no}`)
     } catch (e: any) { message.error(e.message) } finally { setPaying(false) }
   }
@@ -141,32 +179,34 @@ export default function PosPage() {
               placeholder="Nama pembeli (opsional)" value={custName} allowClear
               onChange={(e) => setCustName(e.target.value)} style={{ marginTop: 12 }}
             />
-            <Space style={{ marginTop: 12, width: '100%', justifyContent: 'space-between' }} wrap>
-              <Select value={method} onChange={setMethod} style={{ width: 130 }}
-                options={[
-                  { value: 'qris', label: 'QRIS' },
-                  { value: 'edc', label: 'EDC' },
-                ]} />
+            <Space style={{ marginTop: 8, width: '100%' }} wrap>
+              <Tag color="blue" style={{ lineHeight: '22px' }}>EDC</Tag>
+              <Input
+                placeholder="Nomor Reff EDC (dari struk mesin) — wajib" value={edcRef} allowClear
+                onChange={(e) => setEdcRef(e.target.value)} style={{ flex: 1, minWidth: 200 }}
+              />
+            </Space>
+            <Space style={{ marginTop: 12, width: '100%', justifyContent: 'flex-end' }} wrap>
               <Button type="primary" size="large" onClick={startPay} loading={paying} disabled={lines.length === 0}>
-                Bayar {fmtRp(total)}
+                Bayar EDC {fmtRp(total)}
               </Button>
             </Space>
             {lastOrder && (
               <Alert style={{ marginTop: 12 }} type="success" showIcon
-                message={`${lastOrder.order_no} selesai (${lastOrder.payment_method}) — barang langsung diserahkan`} />
+                message={`${lastOrder.order_no} selesai (EDC) — struk siap dicetak`} />
             )}
           </Card>
         </Col>
       </Row>
 
       <Modal
-        title="Bayar QRIS" open={payModal} onCancel={() => setPayModal(false)}
-        footer={<Button type="primary" loading={paying} onClick={doCheckout}>Konfirmasi Sudah Bayar</Button>}
+        title={null} open={receiptOpen && !!lastOrder} onCancel={() => setReceiptOpen(false)}
+        footer={null} width={380}
       >
-        <div style={{ textAlign: 'center' }}>
-          <Typography.Paragraph type="secondary">Customer scan QR ini (mode demo), lalu kasir konfirmasi.</Typography.Paragraph>
-          <QRCodeSVG value={`POS-QRIS-${Date.now()}`} size={200} style={{ margin: '0 auto' }} />
-          <div style={{ marginTop: 8 }}><b>{fmtRp(total)}</b></div>
+        {lastOrder && <Receipt order={lastOrder} />}
+        <div className="no-print" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', gap: 8 }}>
+          <Button type="primary" icon={<PrinterOutlined />} onClick={() => window.print()}>Cetak Struk</Button>
+          <Button onClick={() => setReceiptOpen(false)}>Selesai</Button>
         </div>
       </Modal>
     </div>

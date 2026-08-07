@@ -59,17 +59,22 @@ func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
 		EventID      int64              `json:"event_id"`
 		Method       string             `json:"method"`
 		CustomerName string             `json:"customer_name"`
+		ProviderRef  string             `json:"provider_ref"`
 		Items        []service.CartItem `json:"items"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
 		return
 	}
-	if body.Method != "qris" && body.Method != "edc" {
-		writeErr(w, http.StatusBadRequest, "metode pembayaran harus qris atau edc (cashless)")
+	if body.Method != "edc" {
+		writeErr(w, http.StatusBadRequest, "POS hanya mendukung pembayaran EDC")
 		return
 	}
-	order, err := s.orders.PosCheckout(r.Context(), body.EventID, body.Method, body.Items, body.CustomerName, actorName(r))
+	if body.ProviderRef == "" {
+		writeErr(w, 400, "nomor referensi EDC wajib diisi")
+		return
+	}
+	order, err := s.orders.PosCheckout(r.Context(), body.EventID, body.Method, body.Items, body.CustomerName, actorName(r), body.ProviderRef)
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return
