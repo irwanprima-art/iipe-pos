@@ -106,23 +106,23 @@ type Payment struct {
 }
 
 type Order struct {
-	ID            int64       `json:"id"`
-	OrderNo       string      `json:"order_no"`
-	EventID       int64       `json:"event_id"`
-	EventName     string      `json:"event_name"`
-	Channel       string      `json:"channel"`
-	Status        string      `json:"status"`
-	CustomerName  string      `json:"customer_name"`
-	CustomerPhone string      `json:"customer_phone"`
-	Total         int         `json:"total"`
-	QRCode        string      `json:"qr_code"`
-	PickupNo      *int        `json:"pickup_no"`
-	PaymentMethod string      `json:"payment_method"`
-	ProviderRef   string      `json:"provider_ref"`
-	ReservedUntil *time.Time  `json:"reserved_until"`
-	CreatedAt     time.Time   `json:"created_at"`
-	Items         []OrderItem `json:"items"`
-	Payment       *Payment    `json:"payment,omitempty"`
+	ID            int64           `json:"id"`
+	OrderNo       string          `json:"order_no"`
+	EventID       int64           `json:"event_id"`
+	EventName     string          `json:"event_name"`
+	Channel       string          `json:"channel"`
+	Status        string          `json:"status"`
+	CustomerName  string          `json:"customer_name"`
+	CustomerPhone string          `json:"customer_phone"`
+	Total         int             `json:"total"`
+	QRCode        string          `json:"qr_code"`
+	PickupNo      *int            `json:"pickup_no"`
+	PaymentMethod string          `json:"payment_method"`
+	ProviderRef   string          `json:"provider_ref"`
+	ReservedUntil *time.Time      `json:"reserved_until"`
+	CreatedAt     time.Time       `json:"created_at"`
+	Items         []OrderItem     `json:"items"`
+	Payment       *Payment        `json:"payment,omitempty"`
 	History       []StatusHistory `json:"history"`
 }
 

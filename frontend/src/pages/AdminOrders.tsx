@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Select, Space, Tag, Button, Drawer, Descriptions, message, Popconfirm, Alert, DatePicker } from 'antd'
+import { Card, Table, Select, Space, Tag, Button, Drawer, Descriptions, message, Alert, DatePicker } from 'antd'
 import { FileExcelOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { api, Order, Event, fmtRp, STATUS_LABEL } from '../api'
@@ -51,15 +51,6 @@ export default function AdminOrders() {
     a.click()
     URL.revokeObjectURL(url)
     message.success(`${rows.length} order diexport`)
-  }
-
-  async function act(path: string, body?: any, done?: string) {
-    try {
-      await api.post(path, body)
-      if (done) message.success(done)
-      load()
-      if (detail) api.get<Order>(`/admin/orders/${detail.id}`).then(setDetail)
-    } catch (e: any) { message.error(e.message) }
   }
 
   return (
@@ -117,27 +108,8 @@ export default function AdminOrders() {
                 { title: 'State', dataIndex: 'state' },
               ]}
             />
-            <Space wrap>
-              {['paid', 'picking', 'picked'].includes(detail.status) && (
-                <Button type="primary" onClick={() => act(`/orders/${detail.id}/pick`, undefined, 'Di-pick')}>Pick</Button>
-              )}
-              {['picked', 'packing'].includes(detail.status) && (
-                <Button onClick={() => act(`/orders/${detail.id}/pack`, undefined, 'Di-pack + nomor pickup')}>Pack</Button>
-              )}
-              {detail.status === 'packed' && (
-                <Button onClick={() => act(`/orders/${detail.id}/ready`, undefined, 'Ready (notifikasi terkirim)')}>Tandai Ready</Button>
-              )}
-              {['ready', 'packed'].includes(detail.status) && (
-                <Button type="primary" onClick={() => act(`/orders/${detail.id}/handover`, undefined, 'Handover')}>Handover</Button>
-              )}
-              {!['completed', 'handed_over', 'cancelled'].includes(detail.status) && (
-                <Popconfirm title="Batalkan order?" onConfirm={() => act(`/orders/${detail.id}/cancel`, { reason: 'dibatalkan admin' }, 'Dibatalkan')}>
-                  <Button danger>Batalkan</Button>
-                </Popconfirm>
-              )}
-            </Space>
             {detail.status === 'pending_payment' && (
-              <Alert type="warning" showIcon message="Order menunggu pembayaran QRIS. Di mode demo, konfirmasi dari halaman status customer (Simulasi Bayar)." />
+              <Alert type="warning" showIcon message="Order menunggu pembayaran. Konfirmasi lewat halaman status customer atau webhook payment." />
             )}
           </Space>
         )}
