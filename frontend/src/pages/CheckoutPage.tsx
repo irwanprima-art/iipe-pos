@@ -88,8 +88,8 @@ function PaymentStep({ order, onDone }: { order: Order; onDone: () => void }) {
         </Space>
       ) : pay?.payment_link_url ? (
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Alert type="info" showIcon message="Pembayaran via SumoPay (QRIS)"
-            description="Klik tombol di bawah untuk membuka halaman pembayaran. Status order ter-update otomatis." />
+          <Alert type="info" showIcon message="Pembayaran via Qris"
+            description="Klik tombol di bawah untuk membuka halaman pembayaran." />
           <Descriptions column={1} bordered size="small">
             <Descriptions.Item label="No. Order">{order.order_no}</Descriptions.Item>
             <Descriptions.Item label="Total">{fmtRp(order.total)}</Descriptions.Item>
