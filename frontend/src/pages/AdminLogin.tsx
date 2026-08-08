@@ -27,6 +27,9 @@ export default function AdminLogin() {
           <Input.Password />
         </Form.Item>
         <Button type="primary" htmlType="submit" block>Login</Button>
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <Button type="link" style={{ padding: 0, color: '#888' }} onClick={() => nav('/about')}>Tentang SuperBazaar</Button>
+        </div>
       </Form>
     </Card>
   )

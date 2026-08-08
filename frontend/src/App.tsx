@@ -38,7 +38,6 @@ function TopBar() {
         <Badge count={cartCount} size="small" offset={[-4, 4]}>
           <Button type="text" style={{ color: '#fff' }} icon={<ShoppingCartOutlined style={{ fontSize: 18 }} />} onClick={() => nav('/cart')} />
         </Badge>
-        <Button type="link" style={{ color: 'rgba(255,255,255,.55)', padding: 0, fontSize: 13 }} onClick={() => nav('/about')}>Tentang</Button>
         {loggedIn ? (
           <>
             <Button type="text" style={{ color: '#fff' }} onClick={() => nav('/admin')}>Admin</Button>
