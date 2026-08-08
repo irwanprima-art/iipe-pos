@@ -84,6 +84,13 @@ export default function AdminEvents() {
     } catch (e: any) { message.error(e.message) }
   }
 
+  async function toggleOnlinePayment(ev: Event) {
+    try {
+      await api.patch(`/admin/events/${ev.id}`, { online_payment: !ev.online_payment })
+      load()
+    } catch (e: any) { message.error(e.message) }
+  }
+
   return (
     <Card title="Event Bazaar" extra={<Button type="primary" onClick={() => { form.resetFields(); setOpen(true) }}>+ Event</Button>}>
       <Table
@@ -95,6 +102,15 @@ export default function AdminEvents() {
           { title: 'Nama', dataIndex: 'name' },
           { title: 'Lokasi', dataIndex: 'location' },
           { title: 'Aktif', dataIndex: 'is_active', render: (v: boolean) => <Switch size="small" checked={v} onChange={() => {}} onClick={() => {}} /> },
+          {
+            title: 'Pembayaran Online', dataIndex: 'online_payment',
+            render: (v: boolean, ev: Event) => (
+              <Space size={4}>
+                <Switch size="small" checked={v} onChange={() => toggleOnlinePayment(ev)} />
+                <span style={{ fontSize: 12, color: v ? '#52c41a' : '#fa8c16' }}>{v ? 'ON' : 'OFF (kasir)'}</span>
+              </Space>
+            ),
+          },
           {
             title: 'Aksi', render: (_: any, ev: Event) => (
               <Space>

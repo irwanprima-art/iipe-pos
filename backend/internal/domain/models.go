@@ -34,13 +34,14 @@ type Component struct {
 }
 
 type Event struct {
-	ID       int64    `json:"id"`
-	Code     string   `json:"code"`
-	Name     string   `json:"name"`
-	Location string   `json:"location"`
-	IsActive bool     `json:"is_active"`
-	Lat      *float64 `json:"lat"`
-	Lng      *float64 `json:"lng"`
+	ID            int64    `json:"id"`
+	Code          string   `json:"code"`
+	Name          string   `json:"name"`
+	Location      string   `json:"location"`
+	IsActive      bool     `json:"is_active"`
+	OnlinePayment bool     `json:"online_payment"`
+	Lat           *float64 `json:"lat"`
+	Lng           *float64 `json:"lng"`
 }
 
 type EventProduct struct {
@@ -119,6 +120,7 @@ type Order struct {
 	PickupNo      *int            `json:"pickup_no"`
 	PaymentMethod string          `json:"payment_method"`
 	ProviderRef   string          `json:"provider_ref"`
+	OnlinePayment bool            `json:"online_payment"`
 	ReservedUntil *time.Time      `json:"reserved_until"`
 	CreatedAt     time.Time       `json:"created_at"`
 	Items         []OrderItem     `json:"items"`

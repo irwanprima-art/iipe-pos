@@ -124,6 +124,7 @@ func (s *Server) Handler() http.Handler {
 	// ---- POS + fulfillment (semua staf) ----
 	mux.HandleFunc("GET /api/v1/pos/products", s.requireAuth(s.handlePosProducts, staffRoles...))
 	mux.HandleFunc("POST /api/v1/pos/checkout", s.requireAuth(s.handlePosCheckout, staffRoles...))
+	mux.HandleFunc("POST /api/v1/pos/orders/{id}/pay-cashier", s.requireAuth(s.handlePosPayOrder, staffRoles...))
 	mux.HandleFunc("GET /api/v1/fulfillment/orders", s.requireAuth(s.handleFulfillmentOrders, staffRoles...))
 	mux.HandleFunc("POST /api/v1/orders/{id}/pick", s.requireAuth(s.handlePick, staffRoles...))
 	mux.HandleFunc("POST /api/v1/orders/{id}/pick-item", s.requireAuth(s.handlePickItem, staffRoles...))

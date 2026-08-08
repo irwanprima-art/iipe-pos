@@ -11,7 +11,7 @@ export function num(v: unknown): number | undefined {
 }
 
 // ---------- types ----------
-export interface Event { id: number; code: string; name: string; location: string; is_active: boolean; lat?: number; lng?: number }
+export interface Event { id: number; code: string; name: string; location: string; is_active: boolean; online_payment: boolean; lat?: number; lng?: number }
 export interface Component { product_id: number; sku: string; name: string; qty: number }
 export interface Product {
   id: number; sku: string; name: string; category: string; description: string
@@ -34,7 +34,7 @@ export interface StatusHistory { status: string; actor: string; created_at: stri
 export interface Order {
   id: number; order_no: string; event_id: number; event_name: string; channel: string; status: string
   customer_name: string; customer_phone: string; total: number; qr_code: string; pickup_no?: number
-  payment_method: string; provider_ref: string; reserved_until?: string; created_at: string
+  payment_method: string; provider_ref: string; online_payment: boolean; reserved_until?: string; created_at: string
   items: OrderItem[]; payment?: Payment; history?: StatusHistory[]
 }
 export interface PosProduct {

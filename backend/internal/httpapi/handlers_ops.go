@@ -82,6 +82,28 @@ func (s *Server) handlePosCheckout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, order)
 }
 
+// handlePosPayOrder: bayar order online di kasir (saat online_payment event off).
+func (s *Server) handlePosPayOrder(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		writeErr(w, 400, "id tidak valid")
+		return
+	}
+	var body struct {
+		ProviderRef string `json:"provider_ref"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeErr(w, 400, "bad request")
+		return
+	}
+	if err := s.orders.PayAtCounter(r.Context(), id, "edc", body.ProviderRef, actorName(r)); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	ord, _ := s.orders.Get(r.Context(), id)
+	writeJSON(w, http.StatusOK, ord)
+}
+
 func (s *Server) handleFulfillmentOrders(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	orders, err := s.orders.List(r.Context(), status, queryInt(r, "event_id"), r.URL.Query().Get("from"), r.URL.Query().Get("to"))

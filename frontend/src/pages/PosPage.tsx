@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Card, Table, Button, Input, Select, Space, Tag, Modal, message, Statistic, Row, Col, Alert, Typography } from 'antd'
+import { Card, Table, Button, Input, Select, Space, Tag, Modal, message, Statistic, Row, Col, Alert, Typography, Descriptions } from 'antd'
 import { ScanOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
 import { QRCodeSVG } from 'qrcode.react'
 import { api, PosProduct, Event, Order, fmtRp } from '../api'
@@ -56,6 +56,36 @@ export default function PosPage() {
   const [search, setSearch] = useState('')
   const [custName, setCustName] = useState('')
   const [edcRef, setEdcRef] = useState('')
+  // bayar order online di kasir (saat online_payment off)
+  const [cashierOpen, setCashierOpen] = useState(false)
+  const [cashierScan, setCashierScan] = useState('')
+  const [cashierOrder, setCashierOrder] = useState<Order | null>(null)
+  const [cashierRef, setCashierRef] = useState('')
+  const [cashierPaying, setCashierPaying] = useState(false)
+
+  async function doCashierScan() {
+    const t = cashierScan.trim()
+    if (!t) return
+    try {
+      const o = await api.post<Order>('/orders/scan', { token: t })
+      setCashierOrder(o)
+      setCashierScan('')
+      setCashierRef('')
+    } catch (e: any) { message.error(e.message) }
+  }
+
+  async function doCashierPay() {
+    if (!cashierOrder) return
+    if (!cashierRef.trim()) { message.warning('Nomor reff EDC wajib diisi'); return }
+    setCashierPaying(true)
+    try {
+      const o = await api.post<Order>(`/pos/orders/${cashierOrder.id}/pay-cashier`, { provider_ref: cashierRef.trim() })
+      message.success(`Order ${o.order_no} dibayar di kasir`)
+      setCashierOrder(null)
+      setCashierRef('')
+      setCashierOpen(false)
+    } catch (e: any) { message.error(e.message) } finally { setCashierPaying(false) }
+  }
 
   useEffect(() => { api.get<Event[]>('/store/events').then((e) => { setEvents(e); if (e.length) setEventId(e[0].id) }) }, [])
   useEffect(() => {
@@ -118,6 +148,12 @@ export default function PosPage() {
 
   return (
     <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
+      <Space style={{ marginBottom: 12 }} wrap>
+        <Typography.Text strong>Kasir POS</Typography.Text>
+        <Select size="small" style={{ width: 200 }} value={eventId || undefined} onChange={setEventId}
+          options={events.map((e) => ({ value: e.id, label: e.name }))} />
+        <Button size="small" onClick={() => setCashierOpen(true)}>Bayar Order Online</Button>
+      </Space>
       <Row gutter={[16, 16]}>
         <Col xs={24} md={14}>
           <Card
@@ -127,14 +163,12 @@ export default function PosPage() {
                 options={events.map((e) => ({ value: e.id, label: e.name }))} />
             }
           >
-            <Space style={{ marginBottom: 8 }} wrap>
-              <Input
-                placeholder="Scan barcode PCS / CARTON lalu Enter"
-                prefix={<ScanOutlined />} value={scan} onChange={(e) => setScan(e.target.value)}
-                onPressEnter={onScan} style={{ width: 320 }}
-              />
-              <Input.Search placeholder="Cari nama / SKU" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 220 }} />
-            </Space>
+      <Space style={{ marginBottom: 12 }} wrap>
+        <Typography.Text strong>Kasir POS</Typography.Text>
+        <Select size="small" style={{ width: 200 }} value={eventId || undefined} onChange={setEventId}
+          options={events.map((e) => ({ value: e.id, label: e.name }))} />
+        <Button size="small" onClick={() => setCashierOpen(true)}>Bayar Order Online</Button>
+      </Space>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
               {filtered.map((p) => (
                 <button
@@ -199,6 +233,51 @@ export default function PosPage() {
           </Card>
         </Col>
       </Row>
+
+      <Modal
+        title="Bayar Order Online di Kasir" open={cashierOpen} onCancel={() => { setCashierOpen(false); setCashierOrder(null) }}
+        footer={null} width={480}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size={12}>
+          <Alert type="info" showIcon message="Scan QR dari halaman status order customer (mode bayar di kasir)." />
+          <Space wrap>
+            <Input
+              prefix={<ScanOutlined />} placeholder="Scan QR / kode order" value={cashierScan}
+              onChange={(e) => setCashierScan(e.target.value)} onPressEnter={doCashierScan} style={{ width: 280 }}
+            />
+            <Button onClick={doCashierScan}>Scan</Button>
+          </Space>
+          {cashierOrder && (
+            <>
+              <Descriptions column={1} bordered size="small">
+                <Descriptions.Item label="Order">{cashierOrder.order_no}</Descriptions.Item>
+                <Descriptions.Item label="Customer">{cashierOrder.customer_name} ({cashierOrder.customer_phone})</Descriptions.Item>
+                <Descriptions.Item label="Status">{cashierOrder.status}</Descriptions.Item>
+                <Descriptions.Item label="Total"><b>{fmtRp(cashierOrder.total)}</b></Descriptions.Item>
+              </Descriptions>
+              <Table
+                size="small" pagination={false} rowKey="id"
+                dataSource={cashierOrder.items.filter((i) => i.item_type !== 'component')}
+                columns={[
+                  { title: 'Item', dataIndex: 'name' },
+                  { title: 'Qty', dataIndex: 'qty', width: 60 },
+                  { title: 'Subtotal', render: (_: any, l: any) => fmtRp(l.price * l.qty) },
+                ]}
+              />
+              <Space wrap>
+                <Tag color="blue">EDC</Tag>
+                <Input placeholder="Nomor Reff EDC — wajib" value={cashierRef} onChange={(e) => setCashierRef(e.target.value)} style={{ width: 220 }} />
+              </Space>
+              <Button type="primary" size="large" block loading={cashierPaying} disabled={cashierOrder.status !== 'pending_payment'} onClick={doCashierPay}>
+                Konfirmasi Sudah Bayar ({fmtRp(cashierOrder.total)})
+              </Button>
+              {cashierOrder.status !== 'pending_payment' && (
+                <Alert type="warning" showIcon message="Order ini tidak dalam status menunggu pembayaran." />
+              )}
+            </>
+          )}
+        </Space>
+      </Modal>
 
       <Modal
         title={null} open={receiptOpen && !!lastOrder} onCancel={() => setReceiptOpen(false)}

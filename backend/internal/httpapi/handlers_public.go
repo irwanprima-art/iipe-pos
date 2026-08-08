@@ -34,7 +34,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 // ---------- Storefront ----------
 
 func (s *Server) handleStoreEvents(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, location, is_active, lat, lng FROM events WHERE is_active ORDER BY id`)
+	rows, err := s.pool.Query(r.Context(), `SELECT id, code, name, location, is_active, online_payment, lat, lng FROM events WHERE is_active ORDER BY id`)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -43,7 +43,7 @@ func (s *Server) handleStoreEvents(w http.ResponseWriter, r *http.Request) {
 	out := []domain.Event{}
 	for rows.Next() {
 		var e domain.Event
-		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.Lat, &e.Lng); err != nil {
+		if err := rows.Scan(&e.ID, &e.Code, &e.Name, &e.Location, &e.IsActive, &e.OnlinePayment, &e.Lat, &e.Lng); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}
@@ -238,7 +238,11 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	}
 	body.CustomerPhone = service.NormalizePhone(body.CustomerPhone)
 
-	order, err := s.orders.Checkout(r.Context(), body.EventID, body.Items, body.CustomerName, body.CustomerPhone)
+	// toggle pembayaran online event (false → bayar di kasir)
+	var onlinePayment bool
+	_ = s.pool.QueryRow(r.Context(), `SELECT online_payment FROM events WHERE id=$1`, body.EventID).Scan(&onlinePayment)
+
+	order, err := s.orders.Checkout(r.Context(), body.EventID, body.Items, body.CustomerName, body.CustomerPhone, onlinePayment)
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return

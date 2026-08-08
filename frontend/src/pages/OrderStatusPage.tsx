@@ -23,8 +23,10 @@ export default function OrderStatusPage() {
 
   const stepIdx = STEP_ORDER.indexOf(order.status)
   const step = Math.max(0, stepIdx === -1 ? STEP_ORDER.length : stepIdx)
-  // QR pickup hanya ditampilkan setelah pembayaran sukses (bukan saat menunggu bayar / dibatalkan)
-  const showQR = order.status !== 'pending_payment' && order.status !== 'cancelled'
+  // QR pickup hanya ditampilkan setelah pembayaran sukses (bukan saat menunggu bayar / dibatalkan),
+  // kecuali mode bayar-di-kasir (online_payment off) — QR dipakai kasir untuk scan pembayaran
+  const payAtCashier = !order.online_payment && order.status === 'pending_payment'
+  const showQR = payAtCashier || (order.status !== 'pending_payment' && order.status !== 'cancelled')
 
   async function simulatePay() {
     setPaying(true)
@@ -128,7 +130,11 @@ export default function OrderStatusPage() {
 
           {order.status === 'pending_payment' && (
             <Space direction="vertical" style={{ width: '100%' }}>
-              {order.payment?.payment_link_url ? (
+              {payAtCashier ? (
+                <Alert type="success" showIcon
+                  message="Pesanan diterima!"
+                  description="Silakan lakukan pembayaran di kasir — tunjukkan QR di bawah ini kepada kasir." />
+              ) : order.payment?.payment_link_url ? (
                 <Alert type="info" showIcon message="Menunggu pembayaran. Lanjutkan pembayaran via SumoPay."
                   action={<a href={order.payment.payment_link_url} target="_blank" rel="noreferrer"><Button size="small">Bayar Sekarang</Button></a>} />
               ) : order.payment?.provider_ref?.startsWith('MOCK-') ? (
@@ -153,7 +159,9 @@ export default function OrderStatusPage() {
 
           {showQR && (
             <div style={{ textAlign: 'center' }}>
-              <Typography.Paragraph type="secondary">Tunjukkan QR ini ke petugas saat mengambil barang</Typography.Paragraph>
+              <Typography.Paragraph type="secondary">
+                {payAtCashier ? 'Tunjukkan QR ini ke kasir untuk pembayaran' : 'Tunjukkan QR ini ke petugas saat mengambil barang'}
+              </Typography.Paragraph>
               <QRCodeSVG value={order.qr_code} size={200} style={{ margin: '0 auto' }} />
             </div>
           )}

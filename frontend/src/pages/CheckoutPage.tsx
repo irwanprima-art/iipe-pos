@@ -73,7 +73,20 @@ function PaymentStep({ order, onDone }: { order: Order; onDone: () => void }) {
   }
   return (
     <Card title="Pembayaran" style={{ maxWidth: 600, margin: '24px auto', textAlign: 'center' }}>
-      {pay?.payment_link_url ? (
+      {!order.online_payment ? (
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Alert type="success" showIcon message="Pesanan Diterima!"
+            description="Pembayaran online dimatikan untuk event ini. Silakan lakukan pembayaran di kasir — tunjukkan QR di bawah ini." />
+          <QRCodeSVG value={order.qr_code} size={220} style={{ margin: '0 auto' }} />
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="No. Order">{order.order_no}</Descriptions.Item>
+            <Descriptions.Item label="Total">{fmtRp(order.total)}</Descriptions.Item>
+          </Descriptions>
+          <Space style={{ justifyContent: 'center' }}>
+            <Button type="primary" onClick={onDone}>Cek Status</Button>
+          </Space>
+        </Space>
+      ) : pay?.payment_link_url ? (
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           <Alert type="info" showIcon message="Pembayaran via SumoPay (QRIS)"
             description="Klik tombol di bawah untuk membuka halaman pembayaran. Status order ter-update otomatis." />

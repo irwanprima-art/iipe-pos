@@ -46,7 +46,7 @@ func setOrderStatusTx(ctx context.Context, tx pgx.Tx, orderID int64, status, act
 }
 
 // Checkout membuat order online (pending_payment), mereservasi stok, membuat payment QRIS.
-func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, name, phone string) (domain.Order, error) {
+func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, name, phone string, onlinePayment bool) (domain.Order, error) {
 	if len(items) == 0 {
 		return domain.Order{}, errors.New("keranjang kosong")
 	}
@@ -170,21 +170,53 @@ func (o *Orders) Checkout(ctx context.Context, eventID int64, items []CartItem, 
 		return domain.Order{}, err
 	}
 
-	pay, err := o.pay.CreateQRIS(ctx, orderID, total, orderNo)
-	if err != nil {
-		return domain.Order{}, err
-	}
-	// perpanjang reservasi stok mengikuti masa berlaku pembayaran (mis. SumoPay hingga 24 jam)
-	if pay.ExpiresAt != nil {
-		_, _ = o.pool.Exec(ctx, `UPDATE orders SET reserved_until=$1, updated_at=now() WHERE id=$2`, *pay.ExpiresAt, orderID)
-	}
-
 	ord, err := o.Get(ctx, orderID)
 	if err != nil {
 		return domain.Order{}, err
 	}
-	ord.Payment = &pay
+	if onlinePayment {
+		pay, err := o.pay.CreateQRIS(ctx, orderID, total, orderNo)
+		if err != nil {
+			return domain.Order{}, err
+		}
+		// perpanjang reservasi stok mengikuti masa berlaku pembayaran (mis. SumoPay hingga 24 jam)
+		if pay.ExpiresAt != nil {
+			_, _ = o.pool.Exec(ctx, `UPDATE orders SET reserved_until=$1, updated_at=now() WHERE id=$2`, *pay.ExpiresAt, orderID)
+		}
+		ord, _ = o.Get(ctx, orderID)
+		ord.Payment = &pay
+	}
 	return ord, nil
+}
+
+// PayAtCounter menandai order online dibayar di kasir (mis. saat online_payment off).
+func (o *Orders) PayAtCounter(ctx context.Context, orderID int64, method, edcRef, actor string) error {
+	if edcRef == "" {
+		return errors.New("nomor referensi EDC wajib diisi")
+	}
+	tx, err := o.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var status string
+	if err := tx.QueryRow(ctx, `SELECT status FROM orders WHERE id=$1 FOR UPDATE`, orderID).Scan(&status); err != nil {
+		return err
+	}
+	if status != "pending_payment" {
+		return fmt.Errorf("order status %s tidak bisa dibayar di kasir", status)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO payments (order_id, method, amount, status, provider_ref, ref_no)
+		SELECT id, $2, total, 'paid', $3, order_no FROM orders WHERE id=$1`,
+		orderID, method, edcRef); err != nil {
+		return err
+	}
+	if err := setOrderStatusTx(ctx, tx, orderID, "paid", actor); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // PosCheckout membuat order POS yang langsung selesai (handed over) dengan stock PICK langsung.
@@ -691,11 +723,11 @@ func (o *Orders) loadOrder(ctx context.Context, where string, args ...any) (doma
 		SELECT ord.id, ord.order_no, ord.event_id, ev.name, ord.channel, ord.status,
 		       COALESCE(ord.customer_name,''), COALESCE(ord.customer_phone,''),
 		       ord.total, ord.qr_code, ord.pickup_no, COALESCE(ord.payment_method,''), COALESCE(ord.provider_ref,''),
-		       ord.reserved_until, ord.created_at
+		       ev.online_payment, ord.reserved_until, ord.created_at
 		FROM orders ord JOIN events ev ON ev.id = ord.event_id
 		WHERE `+where, args...).Scan(&ord.ID, &ord.OrderNo, &ord.EventID, &eventName, &ord.Channel, &ord.Status,
 		&ord.CustomerName, &ord.CustomerPhone, &ord.Total, &ord.QRCode, &pickup, &ord.PaymentMethod, &ord.ProviderRef,
-		&ord.ReservedUntil, &ord.CreatedAt)
+		&ord.OnlinePayment, &ord.ReservedUntil, &ord.CreatedAt)
 	if err != nil {
 		return ord, err
 	}
