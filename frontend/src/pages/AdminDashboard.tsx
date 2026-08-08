@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Statistic, message, Alert } from 'antd'
+import { Card, Row, Col, Statistic, message, Alert, Space } from 'antd'
 import { api, fmtRp } from '../api'
 
 interface Dashboard {
