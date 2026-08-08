@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Tabs, List, Button, Tag, Space, Input, Modal, message, Descriptions, Alert, Typography, Select, DatePicker } from 'antd'
-import { ScanOutlined } from '@ant-design/icons'
+import { ScanOutlined, PrinterOutlined } from '@ant-design/icons'
 import { api, Order, Event, PosProduct, fmtRp, STATUS_LABEL } from '../api'
 
 // Label tahapan untuk timeline
@@ -41,6 +41,7 @@ export default function FulfillPage() {
   const [doneTo, setDoneTo] = useState('')
   const [doneLoading, setDoneLoading] = useState(false)
   const [pickDetail, setPickDetail] = useState<Order | null>(null)
+  const [labelOrder, setLabelOrder] = useState<Order | null>(null)
 
   // Order selesai (completed) dengan filter tanggal
   function loadDone() {
@@ -73,10 +74,15 @@ export default function FulfillPage() {
   async function act(path: string, done: string) {
     try {
       const id = path.split('/')[2]
-      await api.post(path)
+      const resp = await api.post<{ pickup_no?: number; order?: Order } | Order>(path)
       message.success(done)
       if (scanned && String(scanned.id) === id) setScanned(null)
       load()
+      // pack: munculkan label pickup untuk dicetak
+      if (path.endsWith('/pack')) {
+        const order = (resp as any)?.order || (resp as any)
+        if (order && order.pickup_no != null) setLabelOrder(order)
+      }
     } catch (e: any) { message.error(e.message) }
   }
 
@@ -296,6 +302,35 @@ export default function FulfillPage() {
           },
         ]}
       />
+
+      <Modal
+        title="Cetak Label Pickup" open={!!labelOrder} onCancel={() => setLabelOrder(null)}
+        footer={
+          <Space className="no-print">
+            <Button type="primary" icon={<PrinterOutlined />} onClick={() => window.print()}>Cetak Label</Button>
+            <Button onClick={() => setLabelOrder(null)}>Tutup</Button>
+          </Space>
+        }
+        width={420}
+      >
+        {labelOrder && (
+          <div className="label-area" style={{ width: 378, height: 378, margin: '0 auto', border: '2px solid #000', boxSizing: 'border-box', padding: 16, fontFamily: '"Courier New", monospace', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 12 }}>SUPERBAZAAR — {labelOrder.event_name}</div>
+              <div style={{ fontSize: 13, marginTop: 2 }}>{labelOrder.order_no}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 13 }}>NO. AMBIL</div>
+              <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1 }}>#{String(labelOrder.pickup_no).padStart(3, '0')}</div>
+            </div>
+            <div>
+              <QRCodeSVG value={labelOrder.qr_code} size={130} style={{ margin: '0 auto' }} />
+              <div style={{ fontSize: 11, marginTop: 4 }}>Scan saat mengambil barang</div>
+              <div style={{ fontSize: 11 }}>{labelOrder.customer_name}</div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         title={pickDetail ? `Pick — ${pickDetail.order_no}` : ''}

@@ -4,7 +4,9 @@
     visibility: hidden;
   }
   .receipt-area,
-  .receipt-area * {
+  .receipt-area *,
+  .label-area,
+  .label-area * {
     visibility: visible;
   }
   .receipt-area {
@@ -12,6 +14,13 @@
     left: 0;
     top: 0;
     width: 80mm;
+  }
+  .label-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100mm;
+    height: 100mm;
   }
   .no-print {
     display: none !important;
