@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Tabs, List, Button, Tag, Space, Input, message, Descriptions, Alert, Typography, Select, DatePicker } from 'antd'
+import { Card, Table, Tabs, List, Button, Tag, Space, Input, message, Descriptions, Alert, Typography, Select, DatePicker } from 'antd'
 import { ScanOutlined } from '@ant-design/icons'
 import { api, Order, Event, PosProduct, fmtRp, STATUS_LABEL } from '../api'
 
