@@ -28,7 +28,7 @@ export interface StockMovement {
   sku: string; product: string; type: string; qty: number
   ref_type: string; ref_id: number; reason: string; created_at: string
 }
-export interface OrderItem { id: number; item_type: string; parent_id?: number; product_id: number; sku: string; name: string; qty: number; price: number; state: string }
+export interface OrderItem { id: number; item_type: string; parent_id?: number; product_id: number; sku: string; name: string; qty: number; price: number; state: string; picked_qty?: number }
 export interface Payment { id: number; order_id: number; method: string; amount: number; status: string; provider_ref: string; ref_no?: string; payment_link_url?: string; expires_at?: string }
 export interface StatusHistory { status: string; actor: string; created_at: string }
 export interface Order {

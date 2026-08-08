@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Tabs, List, Button, Tag, Space, Input, message, Descriptions, Alert, Typography, Select, DatePicker } from 'antd'
+import { Card, Table, Tabs, List, Button, Tag, Space, Input, Modal, message, Descriptions, Alert, Typography, Select, DatePicker } from 'antd'
 import { ScanOutlined } from '@ant-design/icons'
 import { api, Order, Event, PosProduct, fmtRp, STATUS_LABEL } from '../api'
 
@@ -40,6 +40,7 @@ export default function FulfillPage() {
   const [doneFrom, setDoneFrom] = useState('')
   const [doneTo, setDoneTo] = useState('')
   const [doneLoading, setDoneLoading] = useState(false)
+  const [pickDetail, setPickDetail] = useState<Order | null>(null)
 
   // Order selesai (completed) dengan filter tanggal
   function loadDone() {
@@ -66,6 +67,7 @@ export default function FulfillPage() {
   function replaceOrder(updated: Order) {
     setOrders((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
     setScanned((prev) => (prev && prev.id === updated.id ? updated : prev))
+    setPickDetail((prev) => (prev && prev.id === updated.id ? updated : prev))
   }
 
   async function act(path: string, done: string) {
@@ -101,7 +103,13 @@ export default function FulfillPage() {
       i.product_id === prod.product_id &&
       (i.item_type === 'product' || i.item_type === 'component') &&
       i.state !== 'cancelled' && i.qty > (i.picked_qty || 0))
-    if (!item) { message.warning(`Barcode ${prod.sku} bukan item order ini (atau sudah penuh)`); return false }
+    if (!item) {
+      const anyItem = o.items.find((i) => i.product_id === prod.product_id && i.state !== 'cancelled')
+      if (anyItem?.item_type === 'bundle') message.warning(`${prod.sku} adalah bundle — scan barcode komponen penyusunnya`)
+      else if (anyItem) message.warning(`${prod.sku} sudah ter-pick penuh (${anyItem.picked_qty || 0}/${anyItem.qty})`)
+      else message.warning(`Barcode ${prod.sku} bukan item order ini`)
+      return false
+    }
     try {
       const updated = await api.post<Order>(`/orders/${o.id}/pick-item`, { product_id: prod.product_id, qty })
       message.success(`${prod.sku} +${qty} di-pick (${byCarton ? 'box' : 'pcs'})`)
@@ -125,11 +133,8 @@ export default function FulfillPage() {
     )
   }
 
-  function orderCard(o: Order, actions: React.ReactNode, showPickProgress = false) {
-    const picking = o.status === 'paid' || o.status === 'picking'
-    const displayItems = showPickProgress
-      ? o.items.filter((i) => (i.item_type === 'product' || i.item_type === 'component') && i.state !== 'cancelled')
-      : o.items.filter((i) => i.item_type !== 'component')
+  function orderCard(o: Order, actions: React.ReactNode) {
+    const displayItems = o.items.filter((i) => i.item_type !== 'component')
     return (
       <Card size="small" style={{ marginBottom: 12 }} key={o.id}
         title={<Space>{o.order_no} {o.pickup_no != null && <Tag color="gold">#{String(o.pickup_no).padStart(3, '0')}</Tag>}</Space>}
@@ -141,30 +146,57 @@ export default function FulfillPage() {
         </Descriptions>
         <List
           size="small" dataSource={displayItems}
+          renderItem={(i) => (
+            <List.Item style={{ padding: '4px 0' }}>
+              <Space wrap>
+                {i.item_type === 'bundle' && <Tag color="gold">Bundle</Tag>}
+                <span>{i.name}</span>
+                <span style={{ color: '#888' }}>×{i.qty}</span>
+              </Space>
+            </List.Item>
+          )}
+        />
+        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <b>{fmtRp(o.total)}</b>
+          {actions}
+        </div>
+      </Card>
+    )
+  }
+
+  // Detail pick dalam modal: list produk + progress + scan barcode
+  function PickDetail({ o }: { o: Order }) {
+    const items = o.items.filter((i) => (i.item_type === 'product' || i.item_type === 'component') && i.state !== 'cancelled')
+    const allDone = o.status === 'picked'
+    return (
+      <Space direction="vertical" style={{ width: '100%' }} size={8}>
+        <Descriptions column={1} bordered size="small">
+          <Descriptions.Item label="Customer">{o.customer_name} ({o.customer_phone})</Descriptions.Item>
+          <Descriptions.Item label="Total">{fmtRp(o.total)}</Descriptions.Item>
+        </Descriptions>
+        <List
+          size="small" dataSource={items}
           renderItem={(i) => {
             const picked = i.picked_qty || 0
             const done = picked >= i.qty
             return (
               <List.Item style={{ padding: '4px 0' }}>
                 <Space wrap>
-                  {i.item_type === 'bundle' && <Tag color="gold">Bundle</Tag>}
                   {i.item_type === 'component' && <Tag>komponen</Tag>}
                   <span>{i.name}</span>
                   <span style={{ color: '#888' }}>×{i.qty}</span>
-                  {showPickProgress && (
-                    <Tag color={done ? 'green' : 'blue'}>{picked}/{i.qty} picked</Tag>
-                  )}
+                  <Tag color={done ? 'green' : 'blue'}>{picked}/{i.qty} picked</Tag>
                 </Space>
               </List.Item>
             )
           }}
         />
-        {picking && <PickScan o={o} />}
-        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <b>{fmtRp(o.total)}</b>
-          {actions}
-        </div>
-      </Card>
+        {allDone ? (
+          <Alert type="success" showIcon message="Semua item sudah di-pick! Lanjut ke tab Pack." />
+        ) : (
+          <PickScan o={o} />
+        )}
+      </Space>
     )
   }
 
@@ -184,7 +216,22 @@ export default function FulfillPage() {
         items={[
           {
             key: 'pick', label: `Pick (${filter(['paid', 'picking']).length})`,
-            children: filter(['paid', 'picking']).length ? filter(['paid', 'picking']).map((o) => orderCard(o, null, true)) : (
+            children: filter(['paid', 'picking']).length ? filter(['paid', 'picking']).map((o) => (
+              <Card size="small" hoverable style={{ marginBottom: 8 }} key={o.id} onClick={() => setPickDetail(o)}>
+                <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <b>{o.order_no}</b> · {o.customer_name}
+                    <div style={{ color: '#888', fontSize: 12 }}>
+                      {o.items.filter((i) => i.item_type !== 'component').map((i) => i.name).join(', ')}
+                    </div>
+                  </div>
+                  <Space wrap>
+                    <Tag>{STATUS_LABEL[o.status] || o.status}</Tag>
+                    <b>{fmtRp(o.total)}</b>
+                  </Space>
+                </Space>
+              </Card>
+            )) : (
               <Alert type="info" showIcon message="Tidak ada order yang menunggu pick. Order yang sudah di-pick otomatis pindah ke tab Pack." />
             ),
           },
@@ -265,6 +312,18 @@ export default function FulfillPage() {
           },
         ]}
       />
+
+      <Modal
+        title={pickDetail ? `Pick — ${pickDetail.order_no}` : ''}
+        open={!!pickDetail}
+        onCancel={() => setPickDetail(null)}
+        footer={pickDetail?.status === 'picked' ? (
+          <Button type="primary" size="large" onClick={() => setPickDetail(null)}>Selesai</Button>
+        ) : null}
+        width={520}
+      >
+        {pickDetail && <PickDetail o={pickDetail} />}
+      </Modal>
     </div>
   )
 }
