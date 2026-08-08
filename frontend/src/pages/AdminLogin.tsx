@@ -1,17 +1,18 @@
 import { Card, Form, Input, Button, message } from 'antd'
 import { useNavigate, Navigate } from 'react-router-dom'
-import { api, setToken, setUser, token, clearToken } from '../api'
+import { api, setToken, setUser, token, currentUser } from '../api'
 
 export default function AdminLogin() {
   const nav = useNavigate()
-  if (token()) return <Navigate to="/admin" replace />
+  const home = () => nav(currentUser()?.role === 'operator' ? '/fulfill' : '/admin')
+  if (token()) return <Navigate to={currentUser()?.role === 'operator' ? '/fulfill' : '/admin'} replace />
   async function onFinish(v: any) {
     try {
       const res = await api.post<{ token: string; user: { name: string; role: string } }>('/auth/login', v)
       setToken(res.token)
       setUser(res.user)
       message.success('Login berhasil')
-      nav('/admin')
+      nav(res.user.role === 'operator' ? '/fulfill' : '/admin')
     } catch (e: any) {
       message.error(e.message)
     }

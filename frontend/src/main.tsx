@@ -15,3 +15,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ConfigProvider>
   </React.StrictMode>
 )
+
+// PWA: daftarkan service worker agar bisa dibuka sebagai aplikasi / offline shell
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}

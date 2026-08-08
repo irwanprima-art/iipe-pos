@@ -71,6 +71,8 @@ function AdminLayout() {
   const nav = useNavigate()
   const loc = useLocation()
   if (!token()) return <Navigate to="/admin/login" replace />
+  // operator langsung ke fulfillment — tidak pakai menu admin
+  if (currentUser()?.role === 'operator') return <Navigate to="/fulfill" replace />
   const items = [
     { key: '/admin', label: <Link to="/admin">Dashboard</Link> },
     { key: '/admin/products', label: <Link to="/admin/products">Produk</Link> },
@@ -107,9 +109,12 @@ function AdminLayout() {
 }
 
 export default function App() {
+  const loc = useLocation()
+  // halaman fulfillment fullscreen (mobile/PDA) — tanpa topbar global
+  const fullscreen = loc.pathname.startsWith('/fulfill')
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <TopBar />
+      {!fullscreen && <TopBar />}
       <Content>
         <Routes>
           <Route path="/" element={<StoreHome />} />

@@ -9,7 +9,7 @@ import (
 )
 
 var validRoles = map[string]bool{
-	"admin": true, "cashier": true, "picker": true, "packer": true, "operator": true,
+	"admin": true, "cashier": true, "operator": true,
 }
 
 // handleListUsers: daftar semua user staff/admin.

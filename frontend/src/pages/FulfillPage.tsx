@@ -114,12 +114,13 @@ export default function FulfillPage() {
     const [code, setCode] = useState('')
     const doPick = async () => { if (await pickByBarcode(o, code)) setCode('') }
     return (
-      <Space wrap style={{ marginTop: 8 }}>
+      <Space style={{ marginTop: 8, width: '100%' }} wrap>
         <Input
           prefix={<ScanOutlined />} placeholder="Scan barcode PCS / CARTON lalu Enter" value={code}
-          onChange={(e) => setCode(e.target.value)} onPressEnter={doPick} style={{ width: 280 }}
+          onChange={(e) => setCode(e.target.value)} onPressEnter={doPick}
+          style={{ flex: 1, minWidth: 200 }} size="large" autoFocus
         />
-        <Button onClick={doPick}>Scan Pick</Button>
+        <Button type="primary" size="large" onClick={doPick}>Scan Pick</Button>
       </Space>
     )
   }
@@ -234,12 +235,13 @@ export default function FulfillPage() {
               <>
                 <Alert type="info" showIcon style={{ marginBottom: 12 }}
                   message="Scan QR customer (atau ketik kode) → dapat nomor pickup → cari paket → konfirmasi serah terima." />
-                <Space style={{ marginBottom: 12 }}>
+                <Space style={{ marginBottom: 12, width: '100%' }} wrap>
                   <Input
                     prefix={<ScanOutlined />} placeholder="Scan QR / kode order" value={scanToken}
-                    onChange={(e) => setScanToken(e.target.value)} onPressEnter={doScan} style={{ width: 300 }}
+                    onChange={(e) => setScanToken(e.target.value)} onPressEnter={doScan}
+                    style={{ flex: 1, minWidth: 200 }} size="large"
                   />
-                  <Button type="primary" onClick={doScan}>Scan</Button>
+                  <Button type="primary" size="large" onClick={doScan}>Scan</Button>
                 </Space>
                 {scanned && (
                   <Card size="small" style={{ marginBottom: 12 }} title={`Order ${scanned.order_no}`} extra={<Tag color="gold">#{scanned.pickup_no != null ? String(scanned.pickup_no).padStart(3, '0') : '-'}</Tag>}>

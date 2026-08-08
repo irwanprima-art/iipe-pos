@@ -6,7 +6,7 @@ import { api } from '../api'
 interface UserRow { id: number; email: string; name: string; role: string; created_at: string }
 
 const roleLabels: Record<string, string> = {
-  admin: 'Admin', cashier: 'Kasir', picker: 'Picker', packer: 'Packer', operator: 'Operator',
+  admin: 'Admin', cashier: 'Kasir', operator: 'Operator',
 }
 const roleOpts = Object.keys(roleLabels).map((r) => ({ value: r, label: roleLabels[r] }))
 

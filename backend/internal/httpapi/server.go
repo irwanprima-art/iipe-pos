@@ -70,7 +70,7 @@ func (s *Server) Seed(ctx context.Context) error {
 	return s.seed.Seed(ctx)
 }
 
-var staffRoles = []string{"admin", "cashier", "picker", "packer", "operator"}
+var staffRoles = []string{"admin", "cashier", "operator"}
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
