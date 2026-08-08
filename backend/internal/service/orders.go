@@ -431,9 +431,12 @@ func (o *Orders) PickItem(ctx context.Context, orderID, productID, qty int64, ac
 	}
 	var itemQty int
 	if err := tx.QueryRow(ctx, `
-		SELECT qty FROM order_items
+		SELECT COALESCE(SUM(qty),0) FROM order_items
 		WHERE order_id=$1 AND product_id=$2 AND item_type IN ('product','component') AND state != 'cancelled'`,
 		orderID, productID).Scan(&itemQty); err != nil {
+		return err
+	}
+	if itemQty == 0 {
 		return fmt.Errorf("produk tidak ada di order ini")
 	}
 	var picked int
@@ -443,18 +446,22 @@ func (o *Orders) PickItem(ctx context.Context, orderID, productID, qty int64, ac
 		orderID, productID).Scan(&picked); err != nil {
 		return err
 	}
+	if picked >= itemQty {
+		return fmt.Errorf("produk sudah ter-pick semua (%d/%d)", picked, itemQty)
+	}
 	if qty > int64(itemQty-picked) {
-		return fmt.Errorf("scan berlebih: butuh %d, sudah di-pick %d", itemQty, picked)
+		return fmt.Errorf("scan berlebih: sisa %d, di-scan %d", itemQty-picked, qty)
 	}
 	if err := insertMovement(ctx, tx, eventID, productID, qty, "PICK", "order", orderID, "pick barcode", actor); err != nil {
 		return err
 	}
-	if picked+int(qty) >= itemQty {
-		if _, err := tx.Exec(ctx, `UPDATE order_items SET state='picked'
-			WHERE order_id=$1 AND product_id=$2 AND item_type IN ('product','component') AND state != 'cancelled'`,
-			orderID, productID); err != nil {
-			return err
-		}
+	// tandai baris item yang total kumulatifnya sudah terpenuhi (dukung product+component baris ganda)
+	if _, err := tx.Exec(ctx, `
+		UPDATE order_items oi SET state='picked' FROM (
+			SELECT id, SUM(qty) OVER (ORDER BY id) AS cum FROM order_items
+			WHERE order_id=$1 AND product_id=$2 AND item_type IN ('product','component') AND state != 'cancelled'
+		) x WHERE oi.id = x.id AND x.cum <= $3`, orderID, productID, picked+int(qty)); err != nil {
+		return err
 	}
 	// status order: picking saat masih ada sisa, picked saat semua item selesai
 	var remaining int
@@ -472,6 +479,40 @@ func (o *Orders) PickItem(ctx context.Context, orderID, productID, qty int64, ac
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+// PickItemByBarcode mem-pick berdasarkan scan barcode (pcs=1, carton=qty_per_carton).
+// Verifikasi barcode dilakukan di sini: harus cocok dengan produk yang ADA di order ini.
+func (o *Orders) PickItemByBarcode(ctx context.Context, orderID int64, barcode, actor string) error {
+	if barcode == "" {
+		return fmt.Errorf("barcode kosong")
+	}
+	// cari produk yang barcode-nya cocok DAN merupakan item di order ini (pcs diutamakan)
+	var pid, qtyPerCarton int64
+	var bPCS, bCarton string
+	err := o.pool.QueryRow(ctx, `
+		SELECT p.id, p.qty_per_carton, COALESCE(p.barcode_pcs,''), COALESCE(p.barcode_carton,'')
+		FROM products p JOIN order_items oi ON oi.product_id = p.id
+		WHERE oi.order_id=$1 AND oi.state != 'cancelled'
+		  AND (p.barcode_pcs=$2 OR p.barcode_carton=$2)
+		ORDER BY (p.barcode_pcs=$2) DESC, p.id LIMIT 1`, orderID, barcode).
+		Scan(&pid, &qtyPerCarton, &bPCS, &bCarton)
+	if err == pgx.ErrNoRows {
+		var exists int
+		_ = o.pool.QueryRow(ctx, `SELECT 1 FROM products WHERE barcode_pcs=$1 OR barcode_carton=$1 LIMIT 1`, barcode).Scan(&exists)
+		if exists == 1 {
+			return fmt.Errorf("produk dengan barcode ini tidak ada di order")
+		}
+		return fmt.Errorf("barcode tidak ditemukan")
+	}
+	if err != nil {
+		return err
+	}
+	qty := int64(1)
+	if bPCS != barcode && bCarton == barcode && qtyPerCarton > 0 {
+		qty = qtyPerCarton
+	}
+	return o.PickItem(ctx, orderID, pid, qty, actor)
 }
 
 // Pack menandai order packed dan memberi nomor pickup berurutan per event.

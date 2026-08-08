@@ -139,7 +139,8 @@ func (s *Server) handlePick(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ord)
 }
 
-// handlePickItem: pick sebagian produk berdasarkan scan barcode (pcs=1, carton=qty_per_carton).
+// handlePickItem: pick sebagian produk — via scan barcode (pcs=1, carton=qty_per_carton)
+// atau langsung product_id + qty.
 func (s *Server) handlePickItem(w http.ResponseWriter, r *http.Request) {
 	id, err := pathID(r, "id")
 	if err != nil {
@@ -147,16 +148,24 @@ func (s *Server) handlePickItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		ProductID int64 `json:"product_id"`
-		Qty       int64 `json:"qty"`
+		Barcode   string `json:"barcode"`
+		ProductID int64  `json:"product_id"`
+		Qty       int64  `json:"qty"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, 400, "bad request")
 		return
 	}
-	if err := s.orders.PickItem(r.Context(), id, body.ProductID, body.Qty, actorName(r)); err != nil {
-		writeErr(w, 400, err.Error())
-		return
+	if body.Barcode != "" {
+		if err := s.orders.PickItemByBarcode(r.Context(), id, body.Barcode, actorName(r)); err != nil {
+			writeErr(w, 400, err.Error())
+			return
+		}
+	} else {
+		if err := s.orders.PickItem(r.Context(), id, body.ProductID, body.Qty, actorName(r)); err != nil {
+			writeErr(w, 400, err.Error())
+			return
+		}
 	}
 	ord, _ := s.orders.Get(r.Context(), id)
 	writeJSON(w, http.StatusOK, ord)

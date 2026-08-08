@@ -90,29 +90,13 @@ export default function FulfillPage() {
     } catch (e: any) { message.error(e.message) }
   }
 
-  // --- Pick via scan barcode: pcs = 1 pcs, carton = qty_per_carton; verifikasi item order ---
+  // --- Pick via scan barcode: verifikasi dilakukan di backend (pcs=1, carton=qty_per_carton) ---
   async function pickByBarcode(o: Order, code: string) {
     const c = (code || '').trim()
     if (!c) return false
-    const byPcs = products.find((p) => p.barcode_pcs === c)
-    const byCarton = products.find((p) => p.barcode_carton === c)
-    const prod = byPcs || byCarton
-    if (!prod) { message.warning('Barcode tidak ditemukan'); return false }
-    const qty = byCarton ? prod.qty_per_carton : 1
-    const item = o.items.find((i) =>
-      i.product_id === prod.product_id &&
-      (i.item_type === 'product' || i.item_type === 'component') &&
-      i.state !== 'cancelled' && i.qty > (i.picked_qty || 0))
-    if (!item) {
-      const anyItem = o.items.find((i) => i.product_id === prod.product_id && i.state !== 'cancelled')
-      if (anyItem?.item_type === 'bundle') message.warning(`${prod.sku} adalah bundle — scan barcode komponen penyusunnya`)
-      else if (anyItem) message.warning(`${prod.sku} sudah ter-pick penuh (${anyItem.picked_qty || 0}/${anyItem.qty})`)
-      else message.warning(`Barcode ${prod.sku} bukan item order ini`)
-      return false
-    }
     try {
-      const updated = await api.post<Order>(`/orders/${o.id}/pick-item`, { product_id: prod.product_id, qty })
-      message.success(`${prod.sku} +${qty} di-pick (${byCarton ? 'box' : 'pcs'})`)
+      const updated = await api.post<Order>(`/orders/${o.id}/pick-item`, { barcode: c })
+      message.success('Item di-pick ✓')
       replaceOrder(updated)
       return true
     } catch (e: any) { message.error(e.message); return false }
