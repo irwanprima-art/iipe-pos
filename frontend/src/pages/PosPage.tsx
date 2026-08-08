@@ -148,27 +148,26 @@ export default function PosPage() {
 
   return (
     <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Typography.Text strong>Kasir POS</Typography.Text>
-        <Select size="small" style={{ width: 200 }} value={eventId || undefined} onChange={setEventId}
-          options={events.map((e) => ({ value: e.id, label: e.name }))} />
-        <Button size="small" onClick={() => setCashierOpen(true)}>Bayar Order Online</Button>
-      </Space>
       <Row gutter={[16, 16]}>
         <Col xs={24} md={14}>
           <Card
             size="small" title="Cari / Scan Produk"
             extra={
-              <Select size="small" style={{ width: 200 }} value={eventId || undefined} onChange={setEventId}
-                options={events.map((e) => ({ value: e.id, label: e.name }))} />
+              <Space wrap>
+                <Select size="small" style={{ width: 200 }} value={eventId || undefined} onChange={setEventId}
+                  options={events.map((e) => ({ value: e.id, label: e.name }))} />
+                <Button size="small" onClick={() => setCashierOpen(true)}>Bayar Order Online</Button>
+              </Space>
             }
           >
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Typography.Text strong>Kasir POS</Typography.Text>
-        <Select size="small" style={{ width: 200 }} value={eventId || undefined} onChange={setEventId}
-          options={events.map((e) => ({ value: e.id, label: e.name }))} />
-        <Button size="small" onClick={() => setCashierOpen(true)}>Bayar Order Online</Button>
-      </Space>
+            <Space style={{ marginBottom: 8 }} wrap>
+              <Input
+                placeholder="Scan barcode PCS / CARTON lalu Enter"
+                prefix={<ScanOutlined />} value={scan} onChange={(e) => setScan(e.target.value)}
+                onPressEnter={onScan} style={{ width: 320 }}
+              />
+              <Input.Search placeholder="Cari nama / SKU" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 220 }} />
+            </Space>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
               {filtered.map((p) => (
                 <button
